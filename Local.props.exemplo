@@ -1,0 +1,6 @@
+<Project>
+  <!-- Copie para Local.props (fica fora do git) e ponha a pasta do seu jogo. -->
+  <PropertyGroup>
+    <GameDir>D:\Jogos\Proton Bus Simulator</GameDir>
+  </PropertyGroup>
+</Project>

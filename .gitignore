@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+# Caminho do jogo de cada um
+Local.props
+# Saída do script de release
+dist/
+*.log

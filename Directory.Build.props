@@ -1,0 +1,18 @@
+<Project>
+  <!-- Pasta do jogo (onde fica "Proton Bus Simulator.exe", com o MelonLoader instalado e o jogo aberto
+       pelo menos uma vez, para gerar MelonLoader\Il2CppAssemblies). Só a PBSLoaderCommonUtils precisa dela; o
+       instalador compila sem o jogo. Em ordem de prioridade:
+         dotnet build -p:GameDir="D:\Jogos\Proton"
+         Local.props nesta pasta (copie Local.props.exemplo; fica fora do git)
+         variável de ambiente PBS_DIR
+       Para compilar sem instalar no jogo: -p:Instalar=false -->
+  <Import Project="$(MSBuildThisFileDirectory)Local.props" Condition="Exists('$(MSBuildThisFileDirectory)Local.props')" />
+
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">$(PBS_DIR)</GameDir>
+    <MLDir Condition="'$(MLDir)' == ''">$(GameDir)\MelonLoader</MLDir>
+    <Il2CppDir Condition="'$(Il2CppDir)' == ''">$(MLDir)\Il2CppAssemblies</Il2CppDir>
+    <Instalar Condition="'$(Instalar)' == ''">true</Instalar>
+    <Authors>nzrn</Authors>
+  </PropertyGroup>
+</Project>

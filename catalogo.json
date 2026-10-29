@@ -1,0 +1,34 @@
+{
+  "formato": 1,
+  "instalador": {
+    "repo": "Sebola3461/pbsu-loader",
+    "tag": "instalador-v",
+    "arquivo": "PbsuLoader.exe"
+  },
+  "melonloader": {
+    "versao": "0.7.3",
+    "url": "https://github.com/LavaGang/MelonLoader/releases/download/v0.7.3/MelonLoader.x64.zip",
+    "sha256": "5b2b2f3d1cd42b59ec886c5bdc2663edae87a0097a4f4a8f58c0965a99dda416"
+  },
+  "jogo": {
+    "executavel": "Proton Bus Simulator.exe",
+    "versoes": [
+      { "nome": "307", "gameassembly_sha256": "a61a1ab69420147838c110f5c364f5b808387d218f55978a65a8f859f036bacc" }
+    ]
+  },
+  "mods": [
+    {
+      "id": "PBSLoaderCommonUtils",
+      "nome": "PBSLoaderCommonUtils",
+      "autor": "nzrn",
+      "descricao": "Base dos mods: atalhos sem conflito com o jogo, um dono só para o cursor, metadados do veículo e simulação de ar comprimido com freio a ar.",
+      "estado": "testado",
+      "repo": "Sebola3461/pbsu-loader",
+      "tag": "pbsloadercommonutils-v",
+      "arquivo": "PBSLoaderCommonUtils.dll",
+      "obrigatorio": true,
+      "dependencias": [],
+      "versoesDoJogo": ["307"]
+    }
+  ]
+}

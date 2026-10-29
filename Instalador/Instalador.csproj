@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- .NET Framework 4.8 já vem no Windows 10 e 11: um .exe pequeno, sem pedir para instalar runtime. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>PbsuLoader</AssemblyName>
+    <RootNamespace>PbsuLoader</RootNamespace>
+    <Version>0.1.0</Version>
+    <Product>PBSU Loader</Product>
+    <Description>Instalador do MelonLoader e dos mods do Proton Bus Simulator</Description>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <!-- Cópia do catálogo para quando não houver rede. -->
+    <EmbeddedResource Include="..\catalogo.json" LogicalName="PbsuLoader.catalogo.json" />
+  </ItemGroup>
+
+</Project>

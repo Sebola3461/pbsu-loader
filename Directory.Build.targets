@@ -1,0 +1,11 @@
+<Project>
+  <!-- Só a PBSLoaderCommonUtils (biblioteca) precisa do jogo; o instalador (WinExe) compila sem ele. -->
+  <Target Name="VerificarJogo" BeforeTargets="ResolveAssemblyReferences" Condition="'$(OutputType)' == 'Library' And !Exists('$(MLDir)\net6\MelonLoader.dll')">
+    <Error Text="MelonLoader não encontrado em '$(MLDir)'. Diga onde está o jogo: copie Local.props.exemplo para Local.props e ajuste GameDir, defina a variável PBS_DIR ou use -p:GameDir=&quot;D:\Jogos\Proton&quot;. O jogo precisa ter o MelonLoader instalado e ter sido aberto uma vez." />
+  </Target>
+
+  <!-- Copia a DLL para a pasta Mods do jogo. Com o jogo aberto a DLL está em uso: vira aviso, não erro. -->
+  <Target Name="InstalarNoJogo" AfterTargets="Build" Condition="'$(OutputType)' == 'Library' And '$(Instalar)' == 'true' And Exists('$(GameDir)\Mods')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\Mods" ContinueOnError="true" />
+  </Target>
+</Project>

@@ -3,12 +3,13 @@
 
     .\release.ps1 instalador             -> dist\PbsuLoader.exe,           tag instalador-v<Version do Instalador.csproj>
     .\release.ps1 pbsloadercommonutils   -> dist\PBSLoaderCommonUtils.dll, tag pbsloadercommonutils-v<versão do MelonInfo>
+    .\release.ps1 pbsloadercommoninterface -> dist\PBSLoaderCommonInterface.dll, tag pbsloadercommoninterface-v<versão do MelonInfo>
 
   Cada componente tem o próprio release no GitHub; o instalador acha o mais novo pelo prefixo da tag (ver catalogo.json).
-  A PBSLoaderCommonUtils é compilada contra o jogo da sua máquina (Local.props), então o release sai daqui, não de um CI.
+  A PBSLoaderCommonUtils e a PBSLoaderCommonInterface são compiladas contra o jogo da sua máquina (Local.props), então o release sai daqui, não de um CI.
 #>
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('instalador', 'pbsloadercommonutils')][string]$Componente,
+    [Parameter(Mandatory = $true)][ValidateSet('instalador', 'pbsloadercommonutils', 'pbsloadercommoninterface')][string]$Componente,
     [string]$Dotnet = 'dotnet'
 )
 $ErrorActionPreference = 'Stop'
@@ -19,11 +20,14 @@ if ($Componente -eq 'instalador') {
     $versao = ([xml](Get-Content $proj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
     $saida = Join-Path $raiz 'Instalador\bin\Release\net48\PbsuLoader.exe'
 } else {
-    $proj = Join-Path $raiz 'PBSLoaderCommonUtils\PBSLoaderCommonUtils.csproj'
-    $fonte = Get-Content (Join-Path $raiz 'PBSLoaderCommonUtils\PBSLoaderCommonUtils.cs') -Raw
-    if ($fonte -notmatch 'MelonInfo\([^,]+,\s*"[^"]+",\s*"([^"]+)"') { throw 'Versão não encontrada no MelonInfo da PBSLoaderCommonUtils.' }
-    $versao = $Matches[1]
-    $saida = Join-Path $raiz 'PBSLoaderCommonUtils\bin\Release\net6.0\PBSLoaderCommonUtils.dll'
+    $nome = if ($Componente -eq 'pbsloadercommonutils') { 'PBSLoaderCommonUtils' } else { 'PBSLoaderCommonInterface' }
+    $proj = Join-Path $raiz "$nome\$nome.csproj"
+    $fonte = Get-Content (Join-Path $raiz "$nome\$nome.cs") -Raw
+    # A CommonUtils usa a constante Sdk.Versao no MelonInfo.
+    if ($fonte -match 'MelonInfo\([^,]+,\s*"[^"]+",\s*"([^"]+)"') { $versao = $Matches[1] }
+    elseif ((Get-Content (Join-Path $raiz "$nome\Sdk.cs") -Raw -ErrorAction SilentlyContinue) -match 'Versao\s*=\s*"([^"]+)"') { $versao = $Matches[1] }
+    else { throw "Versão não encontrada no MelonInfo da $nome." }
+    $saida = Join-Path $raiz "$nome\bin\Release\net6.0\$nome.dll"
 }
 $tag = "$Componente-v$versao"
 

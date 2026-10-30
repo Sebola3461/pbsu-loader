@@ -40,6 +40,12 @@ namespace PbsuLoader
     /// catalogo.json, na raiz do pbsu-loader. Qualquer mod entra por pull request nele; as DLLs ficam nos Releases do
     /// repositório de cada mod. Lê a cópia do GitHub e, sem rede, a que veio embutida no instalador.
     /// </summary>
+    /// <summary>Um pacote de scripts de ônibus/mapa (pasta scripts/ com pbsu.json) revisado e listado no catálogo.</summary>
+    class ScriptConfiavel
+    {
+        public string Nome, Autor, Onde, Sha256;
+    }
+
     class Catalogo
     {
         public const string Url = "https://raw.githubusercontent.com/Sebola3461/pbsu-loader/main/catalogo.json";
@@ -49,6 +55,8 @@ namespace PbsuLoader
         public string Executavel = "Proton Bus Simulator.exe";
         public List<VersaoDoJogo> VersoesDoJogo = new List<VersaoDoJogo>();
         public List<ModDoCatalogo> Mods = new List<ModDoCatalogo>();
+        /// <summary>Scripts de ônibus e mapa revisados: o jogo os roda sem perguntar ao jogador (ver Instalacao.GravarConfiaveis).</summary>
+        public List<ScriptConfiavel> ScriptsConfiaveis = new List<ScriptConfiavel>();
         public string Fonte;
 
         public ModDoCatalogo Mod(string id) => Mods.FirstOrDefault(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase));
@@ -118,6 +126,19 @@ namespace PbsuLoader
                 mod.Dependencias.AddRange(Json.Lista(m, "dependencias").OfType<string>());
                 mod.VersoesDoJogo.AddRange(Json.Lista(m, "versoesDoJogo").OfType<string>());
                 c.Mods.Add(mod);
+            }
+
+            foreach (var s in Json.Lista(raiz, "scriptsConfiaveis"))
+            {
+                var sha = (Json.Texto(s, "sha256") ?? "").Trim().ToLowerInvariant();
+                if (sha.Length != 64 || !sha.All(Uri.IsHexDigit)) continue;
+                c.ScriptsConfiaveis.Add(new ScriptConfiavel
+                {
+                    Nome = Json.Texto(s, "nome", "?"),
+                    Autor = Json.Texto(s, "autor", ""),
+                    Onde = Json.Texto(s, "onde", ""),
+                    Sha256 = sha,
+                });
             }
             return c;
         }

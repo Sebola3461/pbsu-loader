@@ -1,11 +1,14 @@
 # PBSU Loader
 
-Modloader para o Proton Bus Simulator Urbano clássico. O repositório tem três coisas:
+Modloader para o Proton Bus Simulator Urbano clássico. O repositório tem quatro coisas:
 
 - o instalador (`PbsuLoader.exe`), que instala o [MelonLoader](https://github.com/LavaGang/MelonLoader) na versão
   testada, instala e atualiza os mods do catálogo e se atualiza sozinho;
 - a PBSLoaderCommonUtils, base que todos os mods do catálogo usam: atalhos sem conflito com o jogo, um dono só para o cursor,
-  metadados do veículo e simulação de ar comprimido (veja [PBSLoaderCommonUtils/README.md](PBSLoaderCommonUtils/README.md));
+  metadados do veículo e simulação de ar comprimido. É também o SDK dos mods (veja [PBSLoaderCommonUtils/README.md](PBSLoaderCommonUtils/README.md)
+  e [PBSLoaderCommonUtils/SDK.md](PBSLoaderCommonUtils/SDK.md));
+- a PBSLoaderCommonInterface, a interface comum: menus e telas redesenhados, o menu de mods com as opções e os atalhos de
+  cada um, os avisos do veículo e o painel de condução (veja [PBSLoaderCommonInterface/README.md](PBSLoaderCommonInterface/README.md));
 - o [catalogo.json](catalogo.json), a lista de mods que o instalador oferece. Cada mod fica no repositório do próprio
   autor e entra no catálogo por pull request.
 
@@ -13,8 +16,8 @@ Modloader para o Proton Bus Simulator Urbano clássico. O repositório tem três
 
 1. Baixe o `PbsuLoader.exe` do [último release](https://github.com/Sebola3461/pbsu-loader/releases) e abra.
 2. Ele procura o jogo sozinho. Se não achar, clique em **Escolher...** e aponte o `Proton Bus Simulator.exe`.
-3. Marque os mods que você quer e clique em **Aplicar**. O instalador põe o MelonLoader, a PBSLoaderCommonUtils e os mods
-   marcados. Se você desmarcar um mod e aplicar, ele é removido.
+3. Marque os mods que você quer e clique em **Aplicar**. O instalador põe o MelonLoader, a PBSLoaderCommonUtils, a PBSLoaderCommonInterface e os
+   mods marcados. Se você desmarcar um mod e aplicar, ele é removido.
 4. Clique em **Jogar**. Na primeira abertura, o MelonLoader leva alguns minutos preparando os arquivos.
 
 Para atualizar, abra o instalador de novo. Ele mostra o que tem versão nova, e **Aplicar** atualiza. Feche o jogo antes:
@@ -22,8 +25,8 @@ com ele aberto, as DLLs estão em uso e não dá para trocá-las.
 
 Quem quiser os pré-lançamentos dos mods marca *Incluir versões de teste*.
 
-Também dá para rodar sem janela: `PbsuLoader.exe --silencioso ["pasta do jogo"] [--beta]` deixa o MelonLoader na versão
-certa, instala a PBSLoaderCommonUtils e atualiza o que já está instalado. O log fica em `UserData/pbsu-loader/instalador.log`.
+Também dá para rodar sem janela: `PbsuLoader.exe --silencioso ["pasta do jogo"] [--beta] [--dev]` deixa o MelonLoader na versão
+certa, instala a PBSLoaderCommonUtils e a PBSLoaderCommonInterface e atualiza o que já está instalado. O log fica em `UserData/pbsu-loader/instalador.log`.
 
 **Desinstalar tudo...** remove os mods do catálogo e o MelonLoader. As configurações (`UserData`) e os mods que você pôs
 à mão continuam lá. O instalador só apaga o que ele mesmo instalou: a lista, com o SHA-256 de cada arquivo, está em
@@ -66,7 +69,7 @@ abrir mesmo assim, clique em **Mais informações** e depois em **Executar assim
 | `dependencias` | `id`s de outros mods do catálogo. Quem marca o mod no instalador leva as dependências junto. |
 | `versoesDoJogo` | Versões do jogo em que o mod foi testado (nomes de `jogo.versoes`). Em outra versão, o instalador avisa. |
 | `padrao` | `true` deixa o mod marcado na primeira instalação. |
-| `obrigatorio` | Reservado à PBSLoaderCommonUtils. |
+| `obrigatorio` | Reservado à PBSLoaderCommonUtils e à PBSLoaderCommonInterface. |
 | `pagina` | Link mostrado no instalador. Padrão: o repositório. |
 
 O instalador baixa sempre o release mais novo cuja tag comece pelo prefixo, e confere o SHA-256 que o GitHub publica
@@ -74,6 +77,42 @@ para cada asset. Pré-lançamentos só aparecem para quem marcou *versões de te
 
 Para testar a sua entrada antes do pull request, aponte o instalador para uma cópia local:
 `set PBSU_CATALOGO=C:\caminho\catalogo.json` e abra o `PbsuLoader.exe` no mesmo prompt.
+
+### Scripts de ônibus e mapa revisados
+
+Um ônibus ou mapa pode trazer scripts próprios (pasta `scripts/`, veja o [SDK](PBSLoaderCommonUtils/SDK.md)). Na primeira
+vez, o jogo pergunta ao jogador se eles podem rodar. Os pacotes revisados pela comunidade entram em `scriptsConfiaveis`
+no catálogo, também por pull request, e rodam sem perguntar:
+
+```json
+"scriptsConfiaveis": [
+  {
+    "nome": "Painel do Torino 2014",
+    "autor": "fulano",
+    "onde": "Marcopolo Torino 2014 (ônibus)",
+    "sha256": "<SHA-256 da DLL do pacote, 64 caracteres>"
+  }
+]
+```
+
+O instalador grava esses hashes em `UserData/PBSLoaderCommonUtils/confiaveis.txt` sempre que aplica. Uma DLL nova (outro
+hash) volta a perguntar até entrar no catálogo de novo. No pull request, mande o código-fonte do pacote junto (ou um link
+para ele): a revisão é do código, não só do arquivo.
+
+### Modo desenvolvedor
+
+O MelonLoader carrega qualquer DLL que esteja em `Mods`, com ou sem release. Para o instalador não brigar com os seus
+builds, marque **Modo desenvolvedor** e, em **pastas...**, aponte as pastas dos seus repositórios. O instalador procura
+os projetos de biblioteca (`.csproj`) até 3 níveis abaixo e usa o build mais novo de cada um, de `bin\Release` ou
+`bin\Debug`, no lugar do release:
+
+- a coluna *Disponível* mostra `local`, e a *Situação* diz se o build é o mesmo que está em `Mods`;
+- **Aplicar** copia o build quando ele é diferente do que está em `Mods`, e nunca troca um build pelo release;
+- mods que ainda não estão no catálogo aparecem no fim da lista, com o nome da DLL, e podem ser instalados e removidos
+  como os outros.
+
+Sem janela, `--silencioso --dev` faz o mesmo com as pastas configuradas. Ao desligar o modo, o instalador volta a
+comparar com os releases e oferece trocar os builds pela versão publicada.
 
 ### Usar a PBSLoaderCommonUtils no seu mod
 
@@ -104,6 +143,7 @@ variável `PBS_DIR` ou com `-p:GameDir="..."`. O build copia a DLL para `Mods`; 
 ```powershell
 .\release.ps1 instalador             # dist\PbsuLoader.exe, tag instalador-v<Version do Instalador.csproj>
 .\release.ps1 pbsloadercommonutils   # dist\PBSLoaderCommonUtils.dll, tag pbsloadercommonutils-v<versão do MelonInfo>
+.\release.ps1 pbsloadercommoninterface # dist\PBSLoaderCommonInterface.dll, tag pbsloadercommoninterface-v<versão do MelonInfo>
 ```
 
 O script compila, calcula o SHA-256 e mostra os comandos `git tag` e `gh release create`. Cada componente tem o próprio

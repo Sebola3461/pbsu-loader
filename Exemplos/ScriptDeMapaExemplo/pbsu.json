@@ -1,0 +1,8 @@
+{
+  "id": "exemplo.mapa",
+  "nome": "Exemplo de script de mapa",
+  "autor": "nzrn",
+  "versao": "1.0.0",
+  "sdkMinimo": "2.0",
+  "dll": "ScriptDeMapaExemplo.dll"
+}

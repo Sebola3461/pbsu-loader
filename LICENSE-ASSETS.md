@@ -9,9 +9,17 @@ Você pode usar, alterar e redistribuir esses arquivos, inclusive em outros mods
 | Arquivo | Componente |
 |---|---|
 | `PBSLoaderCommonUtils/Sons/ar_comprimido.wav` | PBSLoaderCommonUtils |
+| `PBSLoaderCommonInterface/sons/hover.wav` | PBSLoaderCommonInterface |
+| `PBSLoaderCommonInterface/sons/dropdown.wav` | PBSLoaderCommonInterface |
+| `PBSLoaderCommonInterface/sons/menu_confirm.wav` | PBSLoaderCommonInterface |
+| `PBSLoaderCommonInterface/sons/menu_cancel.wav` | PBSLoaderCommonInterface |
+| `PBSLoaderCommonInterface/sons/musica_menu.ogg` | PBSLoaderCommonInterface |
 
 ## Conteúdo do jogo e de outros mods
 
 Este projeto não é afiliado à MEP / Proton Bus Simulator nem aos autores dos ônibus e mapas da comunidade.
 Este repositório não contém arquivos do jogo, código descompilado, chaves nem conteúdo de outros mods. O MelonLoader é
 baixado pelo instalador direto do release oficial da LavaGang.
+
+Modelos criptografados (`.c1`) de ônibus de terceiros só são abertos pelo próprio jogo, em memória, para a prévia 3D
+da PBSLoaderCommonInterface, e nunca são gravados em disco.

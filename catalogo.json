@@ -16,6 +16,7 @@
       { "nome": "307", "gameassembly_sha256": "a61a1ab69420147838c110f5c364f5b808387d218f55978a65a8f859f036bacc" }
     ]
   },
+  "scriptsConfiaveis": [],
   "mods": [
     {
       "id": "PBSLoaderCommonUtils",
@@ -28,6 +29,19 @@
       "arquivo": "PBSLoaderCommonUtils.dll",
       "obrigatorio": true,
       "dependencias": [],
+      "versoesDoJogo": ["307"]
+    },
+    {
+      "id": "PBSLoaderCommonInterface",
+      "nome": "PBSLoaderCommonInterface",
+      "autor": "nzrn",
+      "descricao": "Interface comum dos mods: menus e telas redesenhados, menu de mods com as opções e os atalhos de cada um, avisos do veículo e painel de condução na tela.",
+      "estado": "testado",
+      "repo": "Sebola3461/pbsu-loader",
+      "tag": "pbsloadercommoninterface-v",
+      "arquivo": "PBSLoaderCommonInterface.dll",
+      "obrigatorio": true,
+      "dependencias": ["PBSLoaderCommonUtils"],
       "versoesDoJogo": ["307"]
     }
   ]

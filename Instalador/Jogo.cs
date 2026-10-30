@@ -18,7 +18,14 @@ namespace PbsuLoader
         public static string Procurar(Catalogo c, string[] args)
         {
             var candidatos = new List<string>();
-            candidatos.AddRange(args.Where(a => !a.StartsWith("--")));
+            // Pasta dada na linha de comando: só ela vale. Procurar outra seria aplicar em um jogo que a pessoa não pediu.
+            var explicitas = args.Where(a => !a.StartsWith("--")).ToList();
+            if (explicitas.Count > 0)
+            {
+                foreach (var p in explicitas)
+                    try { if (Valida(p, c)) return Path.GetFullPath(p); } catch { }
+                return null;
+            }
             string aqui = AppDomain.CurrentDomain.BaseDirectory;
             candidatos.Add(aqui);
             candidatos.Add(Path.GetDirectoryName(aqui.TrimEnd('\\')));

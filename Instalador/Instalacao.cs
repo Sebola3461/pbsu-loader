@@ -7,7 +7,7 @@ using System.Text;
 
 namespace PbsuLoader
 {
-    enum Situacao { NaoInstalado, Atualizado, Atualizacao, Diferente, SemLancamento, Erro }
+    enum Situacao { NaoInstalado, Atualizado, Atualizacao, Diferente, SemLancamento, Erro, LocalAtualizado, LocalNovo }
 
     /// <summary>Um mod do catálogo cruzado com o último release e com o que está na pasta do jogo.</summary>
     class EstadoMod
@@ -17,9 +17,13 @@ namespace PbsuLoader
         public Registro.Item Instalado;
         public Situacao Situacao;
         public string Detalhe = "";
+        public string Local, LocalSha; // modo desenvolvedor: build local que vale no lugar do release
+        public bool ArquivoNoJogo;     // a DLL do mod está em Mods (com ou sem registro)
 
-        public bool Presente => Instalado != null || Situacao == Situacao.Diferente;
-        public bool PrecisaBaixar => Remoto != null && (Situacao == Situacao.NaoInstalado || Situacao == Situacao.Atualizacao || Situacao == Situacao.Diferente);
+        public bool Presente => Instalado != null || Situacao == Situacao.Diferente || ArquivoNoJogo;
+        public bool PrecisaBaixar => Local == null && Remoto != null && (Situacao == Situacao.NaoInstalado || Situacao == Situacao.Atualizacao || Situacao == Situacao.Diferente);
+        public bool PrecisaCopiar => Local != null && (Situacao == Situacao.NaoInstalado || Situacao == Situacao.LocalNovo);
+        public bool PrecisaInstalar => PrecisaBaixar || PrecisaCopiar;
     }
 
     /// <summary>
@@ -76,12 +80,29 @@ namespace PbsuLoader
 
         static string Absoluto(string jogo, string relativo) => Path.Combine(jogo, relativo.Replace('/', Path.DirectorySeparatorChar));
 
-        public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre)
+        /// <param name="local">Build local do mod (modo desenvolvedor), ou null para usar o release.</param>
+        public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre, string local = null)
         {
             var e = new EstadoMod { Mod = mod };
             reg.Mods.TryGetValue(mod.Id, out e.Instalado);
-            try { e.Remoto = Rede.UltimoLancamento(mod.Origem, aceitarPre); }
-            catch (Exception ex) { e.Detalhe = "não consegui consultar o GitHub: " + ex.Message; }
+            if (!string.IsNullOrEmpty(mod.Origem.Repo))
+            {
+                try { e.Remoto = Rede.UltimoLancamento(mod.Origem, aceitarPre); }
+                catch (Exception ex) { e.Detalhe = "não consegui consultar o GitHub: " + ex.Message; }
+            }
+
+            if (local != null && EhDll(mod.Origem))
+            {
+                // O build local manda: compara com o que está em Mods (o dotnet build já costuma copiar para lá).
+                e.Local = local;
+                e.LocalSha = Rede.Sha256(local);
+                e.Detalhe = local + ", compilado em " + File.GetLastWriteTime(local).ToString("dd/MM HH:mm");
+                string noJogo = Absoluto(jogo, "Mods/" + mod.Origem.Arquivo);
+                e.ArquivoNoJogo = File.Exists(noJogo);
+                if (!e.ArquivoNoJogo) e.Situacao = Situacao.NaoInstalado;
+                else e.Situacao = string.Equals(Rede.Sha256(noJogo), e.LocalSha, StringComparison.OrdinalIgnoreCase) ? Situacao.LocalAtualizado : Situacao.LocalNovo;
+                return e;
+            }
 
             if (e.Instalado != null)
             {
@@ -126,6 +147,18 @@ namespace PbsuLoader
         public static void Instalar(EstadoMod e, string jogo, Registro reg, Action<string> log)
         {
             var o = e.Mod.Origem;
+            if (e.Local != null)
+            {
+                string rel = "Mods/" + o.Arquivo;
+                Directory.CreateDirectory(Path.Combine(jogo, "Mods"));
+                File.Copy(e.Local, Absoluto(jogo, rel), true);
+                var local = new Registro.Item { Versao = "local", Sha256 = e.LocalSha };
+                local.Arquivos[rel] = e.LocalSha;
+                reg.Mods[e.Mod.Id] = local;
+                reg.Salvar();
+                log("  " + e.Mod.Nome + " copiado do build local (" + e.Local + ").");
+                return;
+            }
             log("Baixando " + e.Mod.Nome + " " + e.Remoto.Versao + "...");
             string tmp = Rede.Baixar(e.Remoto.Url, e.Remoto.Sha256);
             try
@@ -177,6 +210,34 @@ namespace PbsuLoader
         // Dois zips podem trazer o mesmo arquivo (uma lib em UserLibs): ele fica enquanto outro mod o registrar.
         static bool DeOutroMod(Registro reg, string id, string relativo)
             => reg.Mods.Any(p => !string.Equals(p.Key, id, StringComparison.OrdinalIgnoreCase) && p.Value.Arquivos.ContainsKey(relativo));
+
+        /// <summary>
+        /// Grava os hashes dos scripts de ônibus/mapa revisados (scriptsConfiaveis do catálogo) em
+        /// UserData/PBSLoaderCommonUtils/confiaveis.txt: a PBSLoaderCommonUtils roda esses sem perguntar. O arquivo é só do
+        /// instalador; as decisões do jogador ficam em confianca.json e não são tocadas.
+        /// </summary>
+        public static void GravarConfiaveis(Catalogo c, string jogo, Action<string> log)
+        {
+            try
+            {
+                var arq = Path.Combine(jogo, "UserData", "PBSLoaderCommonUtils", "confiaveis.txt");
+                var sb = new StringBuilder();
+                sb.Append("# Scripts de ônibus e mapa revisados no catálogo do PBSU Loader. Este arquivo é reescrito pelo instalador.\n");
+                foreach (var s in c.ScriptsConfiaveis)
+                {
+                    sb.Append("# ").Append(s.Nome);
+                    if (s.Autor.Length > 0) sb.Append(" — ").Append(s.Autor);
+                    if (s.Onde.Length > 0) sb.Append(" (").Append(s.Onde).Append(')');
+                    sb.Append('\n').Append(s.Sha256).Append('\n');
+                }
+                string novo = sb.ToString();
+                if (File.Exists(arq) && File.ReadAllText(arq, Encoding.UTF8) == novo) return;
+                Directory.CreateDirectory(Path.GetDirectoryName(arq));
+                File.WriteAllText(arq, novo, new UTF8Encoding(false));
+                log(c.ScriptsConfiaveis.Count + " script(s) de ônibus/mapa revisados no catálogo.");
+            }
+            catch (Exception e) { log("Não consegui gravar a lista de scripts revisados: " + e.Message); }
+        }
 
         public static void InstalarMelon(Catalogo c, string jogo, Action<string> log)
         {

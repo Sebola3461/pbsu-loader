@@ -31,6 +31,19 @@
     <Reference Include="UnityEngine.VehiclesModule"><HintPath>$(Il2CppDir)\UnityEngine.VehiclesModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
+  <!-- As áreas do SDK se usam entre si. -->
+  <ItemGroup>
+    <Using Include="PBSLoaderCommonUtils.Veiculos" />
+    <Using Include="PBSLoaderCommonUtils.Simulacao" />
+    <Using Include="PBSLoaderCommonUtils.Entrada" />
+    <Using Include="PBSLoaderCommonUtils.Interface" />
+    <Using Include="PBSLoaderCommonUtils.Mundo" />
+    <Using Include="PBSLoaderCommonUtils.Partida" />
+    <Using Include="PBSLoaderCommonUtils.Mapas" />
+    <Using Include="PBSLoaderCommonUtils.Linhas" />
+    <Using Include="PBSLoaderCommonUtils.Midia" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Sons\ar_comprimido.wav" LogicalName="PBSLoaderCommonUtils.ar_comprimido.wav" />
   </ItemGroup>

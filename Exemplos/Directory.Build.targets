@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets" />
+
+  <!-- Scripts de conteúdo: com -p:PastaDeTeste="...\MeuOnibus" (ou a pasta de um mapa), a DLL e o pbsu.json
+       vão para <pasta>\scripts depois do build. -->
+  <Target Name="CopiarParaPastaDeTeste" AfterTargets="Build" Condition="'$(PastaDeTeste)' != '' And Exists('$(MSBuildProjectDirectory)\pbsu.json')">
+    <Copy SourceFiles="$(TargetPath);$(MSBuildProjectDirectory)\pbsu.json" DestinationFolder="$(PastaDeTeste)\scripts" />
+  </Target>
+</Project>

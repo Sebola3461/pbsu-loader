@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>PBSLoaderCommonInterface</AssemblyName>
+    <RootNamespace>PBSLoaderCommonInterface</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(MLDir)\net6\MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(MLDir)\net6\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(MLDir)\net6\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppNVorbis"><HintPath>$(Il2CppDir)\Il2CppNVorbis.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem"><HintPath>$(Il2CppDir)\Il2CppSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Il2CppDir)\Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Il2CppDir)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Il2CppDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Il2CppDir)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Il2CppDir)\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(Il2CppDir)\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(Il2CppDir)\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule"><HintPath>$(Il2CppDir)\UnityEngine.UnityWebRequestAudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(Il2CppDir)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(Il2CppDir)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppSystem.Core"><HintPath>$(Il2CppDir)\Il2CppSystem.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(Il2CppDir)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Il2CppDir)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Il2CppDir)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- A interface comum usa o SDK (PBSLoaderCommonUtils), com as mesmas áreas visíveis que os mods têm. -->
+  <ItemGroup>
+    <ProjectReference Include="..\PBSLoaderCommonUtils\PBSLoaderCommonUtils.csproj" Private="false" />
+    <Using Include="PBSLoaderCommonUtils" />
+    <Using Include="PBSLoaderCommonUtils.Veiculos" />
+    <Using Include="PBSLoaderCommonUtils.Simulacao" />
+    <Using Include="PBSLoaderCommonUtils.Entrada" />
+    <Using Include="PBSLoaderCommonUtils.Interface" />
+    <Using Include="PBSLoaderCommonUtils.Mundo" />
+    <Using Include="PBSLoaderCommonUtils.Partida" />
+    <Using Include="PBSLoaderCommonUtils.Mapas" />
+    <Using Include="PBSLoaderCommonUtils.Linhas" />
+    <Using Include="PBSLoaderCommonUtils.Midia" />
+  </ItemGroup>
+
+  <!-- Sons padrão: vão dentro da DLL e são copiados para UserData/PBSLoaderCommonInterface/sons na primeira vez que
+       faltarem (Som.ExtrairPadroes). Quem trocou um som pelo seu não perde a troca. -->
+  <ItemGroup>
+    <EmbeddedResource Include="sons\*.*" LogicalName="PBSLoaderCommonInterface.sons.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

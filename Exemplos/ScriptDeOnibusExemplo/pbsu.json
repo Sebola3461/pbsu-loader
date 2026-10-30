@@ -1,0 +1,8 @@
+{
+  "id": "exemplo.onibus",
+  "nome": "Exemplo de script de ônibus",
+  "autor": "nzrn",
+  "versao": "1.0.0",
+  "sdkMinimo": "2.0",
+  "dll": "ScriptDeOnibusExemplo.dll"
+}

@@ -22,6 +22,7 @@ namespace PbsuLoader
         List<EstadoMod> _estados = new List<EstadoMod>();
         Lancamento _novoInstalador;
         bool _ocupado, _marcando, _aceitarPre;
+        List<string> _pastasDev; // modo desenvolvedor ligado (lido na thread da janela antes de verificar)
 
         readonly TextBox _pasta = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
         readonly Button _escolher = new Button { Text = "Escolher...", AutoSize = true };
@@ -35,6 +36,8 @@ namespace PbsuLoader
         };
         readonly LinkLabel _detalhe = new LinkLabel { Dock = DockStyle.Fill, Padding = new Padding(0, 4, 0, 0) };
         readonly CheckBox _beta = new CheckBox { Text = "Incluir versões de teste (pré-lançamento)", AutoSize = true };
+        readonly CheckBox _dev = new CheckBox { Text = "Modo desenvolvedor", AutoSize = true };
+        readonly LinkLabel _editarPastasDev = new LinkLabel { Text = "pastas...", AutoSize = true };
         readonly Button _aplicar = new Button { Text = "Aplicar", AutoSize = true };
         readonly Button _verificar = new Button { Text = "Verificar de novo", AutoSize = true };
         readonly Button _abrirMods = new Button { Text = "Abrir pasta Mods", AutoSize = true };
@@ -82,11 +85,15 @@ namespace PbsuLoader
 
             var botoes = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
             botoes.Controls.AddRange(new Control[] { _aplicar, _jogar, _abrirMods, _verificar, _removerTudo });
+            var opcoes = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Anchor = AnchorStyles.Left };
+            var linhaDev = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
+            _editarPastasDev.Padding = new Padding(0, 4, 0, 0);
+            linhaDev.Controls.AddRange(new Control[] { _dev, _editarPastasDev });
+            opcoes.Controls.AddRange(new Control[] { _beta, linhaDev });
             var linhaBotoes = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2 };
             linhaBotoes.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             linhaBotoes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _beta.Anchor = AnchorStyles.Left;
-            linhaBotoes.Controls.Add(_beta, 0, 0);
+            linhaBotoes.Controls.Add(opcoes, 0, 0);
             linhaBotoes.Controls.Add(botoes, 1, 0);
 
             raiz.Controls.Add(linhaPasta, 0, 0);
@@ -101,6 +108,10 @@ namespace PbsuLoader
             AcceptButton = _aplicar;
 
             _beta.Checked = Config.Ler("beta") == "1";
+            _dev.Checked = Local.Ativo;
+            _editarPastasDev.Visible = _dev.Checked;
+            _dev.CheckedChanged += (s, e) => AoTrocarDev();
+            _editarPastasDev.LinkClicked += (s, e) => { if (EditarPastasDev()) Verificar(false); };
             _escolher.Click += (s, e) => EscolherPasta();
             _verificar.Click += (s, e) => Verificar(true);
             _aplicar.Click += (s, e) => Aplicar();
@@ -122,6 +133,7 @@ namespace PbsuLoader
         {
             if (_ocupado) return;
             _aceitarPre = _beta.Checked;
+            _pastasDev = _dev.Checked ? Local.Pastas : null;
             Rodar("Verificando...", () =>
             {
                 if (releerCatalogo || _cat == null)
@@ -153,7 +165,37 @@ namespace PbsuLoader
             _versaoJogo = Jogo.Versao(_jogo, _cat, out _);
             _versaoMelon = Jogo.VersaoMelon(_jogo);
             _reg = Registro.Abrir(_jogo);
-            foreach (var m in _cat.Mods) _estados.Add(Instalacao.Avaliar(m, _jogo, _reg, _aceitarPre));
+            var builds = _pastasDev != null ? Local.Builds(_pastasDev) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in _cat.Mods)
+            {
+                string nome = Path.GetFileNameWithoutExtension(m.Origem.Arquivo);
+                builds.TryGetValue(nome, out var local);
+                builds.Remove(nome);
+                _estados.Add(Instalacao.Avaliar(m, _jogo, _reg, _aceitarPre, local));
+            }
+            // O que sobrou são mods fora do catálogo: aparecem no fim da lista, só no modo desenvolvedor.
+            foreach (var b in builds.OrderBy(b => b.Key))
+                _estados.Add(Instalacao.Avaliar(Local.ForaDoCatalogo(b.Key, b.Value), _jogo, _reg, _aceitarPre, b.Value));
+        }
+
+        void AoTrocarDev()
+        {
+            if (_dev.Checked && Local.Pastas.Count == 0 && !EditarPastasDev())
+            {
+                _dev.Checked = false; // cancelou sem pasta nenhuma
+                return;
+            }
+            Local.Ativo = _dev.Checked;
+            _editarPastasDev.Visible = _dev.Checked;
+            Verificar(false);
+        }
+
+        bool EditarPastasDev()
+        {
+            var novas = Local.EditarPastas(this, Local.Pastas);
+            if (novas == null) return false;
+            Local.Pastas = novas;
+            return novas.Count > 0;
         }
 
         void Preencher()
@@ -197,10 +239,11 @@ namespace PbsuLoader
                 var it = new ListViewItem(e.Mod.Nome + (e.Mod.Obrigatorio ? " (obrigatório)" : "")) { Tag = e };
                 it.SubItems.Add(e.Mod.Estado);
                 it.SubItems.Add(e.Instalado?.Versao ?? (e.Presente ? "?" : ""));
-                it.SubItems.Add(e.Remoto != null ? e.Remoto.Versao + (e.Remoto.PreLancamento ? " (teste)" : "") : "");
+                it.SubItems.Add(e.Local != null ? "local" : e.Remoto != null ? e.Remoto.Versao + (e.Remoto.PreLancamento ? " (teste)" : "") : "");
                 it.SubItems.Add(TextoSituacao(e));
                 it.Checked = e.Mod.Obrigatorio || e.Presente || primeiraVez && e.Mod.Padrao;
-                if (e.Situacao == Situacao.Atualizacao || e.Situacao == Situacao.Diferente) it.ForeColor = Color.DarkOrange;
+                if (e.Situacao == Situacao.Atualizacao || e.Situacao == Situacao.Diferente || e.Situacao == Situacao.LocalNovo) it.ForeColor = Color.DarkOrange;
+                else if (e.Situacao == Situacao.LocalAtualizado) it.ForeColor = Color.SteelBlue;
                 else if (e.Situacao == Situacao.Erro) it.ForeColor = Color.DarkRed;
                 else if (e.Situacao == Situacao.SemLancamento) it.ForeColor = SystemColors.GrayText;
                 _lista.Items.Add(it);
@@ -217,11 +260,13 @@ namespace PbsuLoader
             string s;
             switch (e.Situacao)
             {
-                case Situacao.NaoInstalado: s = "Não instalado"; break;
+                case Situacao.NaoInstalado: s = e.Local != null ? "Não instalado (\"Aplicar\" copia o build local)" : "Não instalado"; break;
                 case Situacao.Atualizado: s = "Atualizado"; break;
                 case Situacao.Atualizacao: s = "Atualização: " + e.Instalado.Versao + " → " + e.Remoto.Versao; break;
                 case Situacao.Diferente: s = e.Remoto != null ? "Diferente do release (\"Aplicar\" substitui)" : "Instalado, sem release para comparar"; break;
                 case Situacao.SemLancamento: s = "Sem release publicado"; break;
+                case Situacao.LocalAtualizado: s = "Build local (o mesmo que está em Mods)"; break;
+                case Situacao.LocalNovo: s = "Build local diferente do que está em Mods (\"Aplicar\" copia)"; break;
                 default: s = "Erro ao consultar"; break;
             }
             if (_versaoJogo != null && e.Mod.VersoesDoJogo.Count > 0 && !e.Mod.VersoesDoJogo.Contains(_versaoJogo))
@@ -242,6 +287,7 @@ namespace PbsuLoader
             string texto = cabeca + ". " + e.Mod.Descricao;
             if (e.Mod.Dependencias.Count > 0) texto += " Precisa de: " + string.Join(", ", e.Mod.Dependencias) + ".";
             if (e.Detalhe.Length > 0) texto += " (" + e.Detalhe + ")";
+            if (e.Mod.Pagina == null) { _detalhe.Text = texto; return; } // build local fora do catálogo
             const string pagina = "  Página do mod";
             _detalhe.Text = texto + pagina;
             _detalhe.Links.Add(texto.Length + 2, pagina.Length - 2, e.Mod.Pagina);
@@ -318,6 +364,7 @@ namespace PbsuLoader
         void Aplicar()
         {
             if (!Pronto()) return;
+            Instalacao.GravarConfiaveis(_cat, _jogo, Log);
             var instalar = new List<EstadoMod>();
             var remover = new List<EstadoMod>();
             var semRelease = new List<string>();
@@ -327,8 +374,8 @@ namespace PbsuLoader
             foreach (ListViewItem it in _lista.Items)
             {
                 var e = (EstadoMod)it.Tag;
-                if (it.Checked && e.PrecisaBaixar) instalar.Add(e);
-                else if (it.Checked && e.Remoto == null && !e.Presente) semRelease.Add(e.Mod.Nome);
+                if (it.Checked && e.PrecisaInstalar) instalar.Add(e);
+                else if (it.Checked && e.Remoto == null && e.Local == null && !e.Presente) semRelease.Add(e.Mod.Nome);
                 else if (!it.Checked && e.Presente) remover.Add(e);
             }
             bool melon = _versaoMelon != _cat.MelonVersao;
@@ -344,7 +391,7 @@ namespace PbsuLoader
             var resumo = new List<string>();
             if (melon) resumo.Add(_versaoMelon == null ? "Instalar o MelonLoader " + _cat.MelonVersao
                 : "Trocar o MelonLoader " + _versaoMelon + " pelo " + _cat.MelonVersao + " (a pasta MelonLoader é recriada)");
-            resumo.AddRange(instalar.Select(e => (e.Situacao == Situacao.NaoInstalado ? "Instalar " : "Atualizar ") + e.Mod.Nome + " " + e.Remoto.Versao));
+            resumo.AddRange(instalar.Select(e => (e.Situacao == Situacao.NaoInstalado ? "Instalar " : "Atualizar ") + e.Mod.Nome + " " + (e.Local != null ? "(build local)" : e.Remoto.Versao)));
             resumo.AddRange(remover.Select(e => "Remover " + e.Mod.Nome));
             if (semRelease.Count > 0) resumo.Add("(sem release, ficam de fora: " + string.Join(", ", semRelease) + ")");
             if (MessageBox.Show(this, string.Join("\n", resumo), "Confirmar", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
@@ -491,7 +538,7 @@ namespace PbsuLoader
         {
             bool valido = _cat != null && Jogo.Valida(_jogo, _cat);
             foreach (var c in new Control[] { _aplicar, _abrirMods, _jogar, _removerTudo, _lista }) c.Enabled = !_ocupado && valido;
-            _escolher.Enabled = _verificar.Enabled = _beta.Enabled = !_ocupado;
+            _escolher.Enabled = _verificar.Enabled = _beta.Enabled = _dev.Enabled = _editarPastasDev.Enabled = !_ocupado;
         }
 
         void Log(string linha)

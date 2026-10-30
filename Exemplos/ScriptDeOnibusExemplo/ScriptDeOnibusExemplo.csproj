@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- dotnet build -p:PastaDeTeste="<pasta de mods de ônibus>\MeuOnibus" copia a DLL e o pbsu.json para MeuOnibus\scripts. -->
+  <PropertyGroup>
+    <AssemblyName>ScriptDeOnibusExemplo</AssemblyName>
+  </PropertyGroup>
+</Project>

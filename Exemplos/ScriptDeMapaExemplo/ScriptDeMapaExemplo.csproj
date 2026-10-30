@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- dotnet build -p:PastaDeTeste="<pasta do mod de mapa>" copia a DLL e o pbsu.json para <mapa>\scripts. -->
+  <PropertyGroup>
+    <AssemblyName>ScriptDeMapaExemplo</AssemblyName>
+  </PropertyGroup>
+</Project>

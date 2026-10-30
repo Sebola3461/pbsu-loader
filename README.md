@@ -147,7 +147,9 @@ variável `PBS_DIR` ou com `-p:GameDir="..."`. O build copia a DLL para `Mods`; 
 ```
 
 O script compila, calcula o SHA-256 e mostra os comandos `git tag` e `gh release create`. Cada componente tem o próprio
-release. Suba a versão antes de rodar: `Version` no `Instalador.csproj` ou o `MelonInfo` da PBSLoaderCommonUtils.
+release. As bibliotecas levam junto o `<nome>.api.json`, de onde o site da documentação gera a referência da API. Suba a
+versão antes de rodar (`Version` no `Instalador.csproj` ou o `MelonInfo` da biblioteca) e registre a mudança no
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Licença
 

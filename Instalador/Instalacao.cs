@@ -39,6 +39,8 @@ namespace PbsuLoader
         }
 
         public Dictionary<string, Item> Mods = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Caminhos do arquivo inválidos ou fora da pasta do jogo: ficaram de fora e somem no próximo Salvar.</summary>
+        public List<string> Ignorados = new List<string>();
         readonly string _arquivo;
 
         Registro(string jogo) { _arquivo = Path.Combine(jogo, "UserData", "pbsu-loader", "instalado.json"); }
@@ -52,11 +54,23 @@ namespace PbsuLoader
                 foreach (var p in mods)
                 {
                     var it = new Item { Versao = Json.Texto(p.Value, "versao"), Sha256 = Json.Texto(p.Value, "sha256") };
+                    // O arquivo fica dentro da pasta do jogo, onde qualquer zip consegue escrever: o que ele lista vai
+                    // ser apagado ao remover, então só vale caminho que não sai dela.
                     if (Json.Obj(p.Value, "arquivos") is Dictionary<string, object> arqs)
-                        foreach (var a in arqs) it.Arquivos[a.Key] = a.Value as string;
+                        foreach (var a in arqs)
+                        {
+                            if (Instalacao.TentarAbsoluto(jogo, a.Key, out _, out var chave)) it.Arquivos[chave] = a.Value as string;
+                            else r.Ignorados.Add(a.Key);
+                        }
                     r.Mods[p.Key] = it;
                 }
             return r;
+        }
+
+        public void AvisarIgnorados(Action<string> log)
+        {
+            foreach (var a in Ignorados) log("instalado.json lista um caminho inválido ou fora da pasta do jogo, ignorado: " + a);
+            Ignorados.Clear();
         }
 
         public void Salvar()
@@ -78,7 +92,38 @@ namespace PbsuLoader
     {
         static bool EhDll(Origem o) => o.Arquivo.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
 
-        static string Absoluto(string jogo, string relativo) => Path.Combine(jogo, relativo.Replace('/', Path.DirectorySeparatorChar));
+        static string Absoluto(string jogo, string relativo)
+        {
+            if (!TentarAbsoluto(jogo, relativo, out var caminho)) throw new InvalidDataException("caminho inválido ou fora da pasta do jogo: " + relativo);
+            return caminho;
+        }
+
+        internal static bool TentarAbsoluto(string jogo, string relativo, out string caminho) => TentarAbsoluto(jogo, relativo, out caminho, out _);
+
+        /// <summary>
+        /// Caminho absoluto de <paramref name="relativo"/> dentro da pasta do jogo e a forma normalizada dele
+        /// ("Mods/X.dll"), que é a chave do registro; false se ele sair da pasta ou não for um caminho válido.
+        /// </summary>
+        internal static bool TentarAbsoluto(string jogo, string relativo, out string caminho, out string chave)
+        {
+            caminho = chave = null;
+            if (string.IsNullOrWhiteSpace(relativo)) return false;
+            try
+            {
+                // IsPathRooted também pega "C:x" e "\x": o Combine não os prende à pasta do jogo ("C:x" vai para a pasta atual do drive).
+                if (Path.IsPathRooted(relativo)) return false;
+                string raiz = Path.GetFullPath(jogo).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                string c = Path.GetFullPath(Path.Combine(raiz, relativo.Replace('/', Path.DirectorySeparatorChar)));
+                if (!c.StartsWith(raiz, StringComparison.OrdinalIgnoreCase)) return false;
+                caminho = c;
+                chave = c.Substring(raiz.Length).Replace(Path.DirectorySeparatorChar, '/');
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException || e is NotSupportedException || e is PathTooLongException)
+            {
+                return false;
+            }
+        }
 
         /// <param name="local">Build local do mod (modo desenvolvedor), ou null para usar o release.</param>
         public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre, string local = null)
@@ -173,17 +218,15 @@ namespace PbsuLoader
                 }
                 else
                 {
-                    string raiz = Path.GetFullPath(jogo).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                     using (var z = ZipFile.OpenRead(tmp))
                         foreach (var entrada in z.Entries)
                         {
                             if (entrada.FullName.EndsWith("/")) continue;
-                            string destino = Path.GetFullPath(Path.Combine(raiz, entrada.FullName));
-                            if (!destino.StartsWith(raiz, StringComparison.OrdinalIgnoreCase))
-                                throw new InvalidDataException("o zip tenta escrever fora da pasta do jogo: " + entrada.FullName);
+                            if (!TentarAbsoluto(jogo, entrada.FullName, out var destino, out var chave))
+                                throw new InvalidDataException("o zip tem um caminho inválido ou fora da pasta do jogo: " + entrada.FullName);
                             Directory.CreateDirectory(Path.GetDirectoryName(destino));
                             entrada.ExtractToFile(destino, true);
-                            novo.Arquivos[destino.Substring(raiz.Length).Replace('\\', '/')] = Rede.Sha256(destino);
+                            novo.Arquivos[chave] = Rede.Sha256(destino);
                         }
                 }
                 // Arquivos da versão antiga que a nova não tem mais.
@@ -212,15 +255,31 @@ namespace PbsuLoader
             => reg.Mods.Any(p => !string.Equals(p.Key, id, StringComparison.OrdinalIgnoreCase) && p.Value.Arquivos.ContainsKey(relativo));
 
         /// <summary>
+        /// Pasta da confiança nos scripts, a mesma que a PBSLoaderCommonUtils lê (Conteudo/Confianca.cs). Fica no perfil
+        /// do usuário e não na pasta do jogo, onde um ônibus ou mapa extraído poderia trazer o arquivo pronto. Null se o
+        /// Windows não informar a pasta.
+        /// </summary>
+        internal static string PastaDeConfianca = PastaDeConfiancaPadrao();
+
+        static string PastaDeConfiancaPadrao()
+        {
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return string.IsNullOrEmpty(local) ? null : Path.Combine(local, "PBSLoaderCommonUtils");
+        }
+
+        /// <summary>
         /// Grava os hashes dos scripts de ônibus/mapa revisados (scriptsConfiaveis do catálogo) em
-        /// UserData/PBSLoaderCommonUtils/confiaveis.txt: a PBSLoaderCommonUtils roda esses sem perguntar. O arquivo é só do
+        /// <see cref="PastaDeConfianca"/>\confiaveis.txt: a PBSLoaderCommonUtils roda esses sem perguntar. O arquivo é só do
         /// instalador; as decisões do jogador ficam em confianca.json e não são tocadas.
         /// </summary>
         public static void GravarConfiaveis(Catalogo c, string jogo, Action<string> log)
         {
             try
             {
-                var arq = Path.Combine(jogo, "UserData", "PBSLoaderCommonUtils", "confiaveis.txt");
+                string copiaAntigaNaPastaDoJogo = Path.Combine(jogo, "UserData", "PBSLoaderCommonUtils", "confiaveis.txt");
+                ApagarSeExistir(copiaAntigaNaPastaDoJogo);
+                if (PastaDeConfianca == null) { log("Sem pasta de dados do usuário: os scripts revisados vão perguntar antes de rodar."); return; }
+                var arq = Path.Combine(PastaDeConfianca, "confiaveis.txt");
                 var sb = new StringBuilder();
                 sb.Append("# Scripts de ônibus e mapa revisados no catálogo do PBSU Loader. Este arquivo é reescrito pelo instalador.\n");
                 foreach (var s in c.ScriptsConfiaveis)
@@ -252,12 +311,10 @@ namespace PbsuLoader
                     log("  Removendo o MelonLoader " + atual + ".");
                     RemoverMelonArquivos(jogo);
                 }
-                string raiz = Path.GetFullPath(jogo).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 using (var z = ZipFile.OpenRead(tmp))
                     foreach (var entrada in z.Entries)
                     {
-                        string destino = Path.GetFullPath(Path.Combine(raiz, entrada.FullName));
-                        if (!destino.StartsWith(raiz, StringComparison.OrdinalIgnoreCase)) continue; // caminho que sai da pasta do jogo
+                        if (!TentarAbsoluto(jogo, entrada.FullName, out var destino)) continue;
                         if (entrada.FullName.EndsWith("/")) { Directory.CreateDirectory(destino); continue; }
                         Directory.CreateDirectory(Path.GetDirectoryName(destino));
                         entrada.ExtractToFile(destino, true);

@@ -22,6 +22,7 @@
     <Reference Include="System.IO.Compression.FileSystem" />
     <!-- Cópia do catálogo para quando não houver rede. -->
     <EmbeddedResource Include="..\catalogo.json" LogicalName="PbsuLoader.catalogo.json" />
+    <InternalsVisibleTo Include="Instalador.Tests" />
   </ItemGroup>
 
 </Project>

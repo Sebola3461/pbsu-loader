@@ -10,16 +10,24 @@ namespace PBSLoaderCommonUtils.Conteudo
 {
     public enum Decisao { Perguntar, Permitir, Recusar, SempreRecusar }
 
-    // Decisões do jogador por SHA-256 da DLL (UserData/PBSLoaderCommonUtils/confianca.json). "Recusar" vale só
+    // Decisões do jogador por SHA-256 da DLL (%LOCALAPPDATA%/PBSLoaderCommonUtils/confianca.json). "Recusar" vale só
     // para esta sessão; "Permitir" e "Sempre recusar" ficam gravados. Um hash novo (pacote atualizado) pergunta
     // de novo. Hashes em confiaveis.txt (um por linha, gravado pelo PBSU Loader a partir do catálogo) já vêm permitidos.
+    // Os dois arquivos ficam fora da pasta do jogo: um ônibus ou mapa extraído nela poderia trazer um "permitir" pronto.
     internal static class Confianca
     {
         static Dictionary<string, string> _gravadas;
         static readonly HashSet<string> _recusadasNaSessao = new(StringComparer.OrdinalIgnoreCase);
         static HashSet<string> _catalogo;
 
-        static string Dir => Path.Combine(MelonEnvironment.UserDataDirectory, "PBSLoaderCommonUtils");
+        static readonly string Dir = PastaDoUsuario();
+        static string DirAntigo => Path.Combine(MelonEnvironment.UserDataDirectory, "PBSLoaderCommonUtils");
+
+        static string PastaDoUsuario()
+        {
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return string.IsNullOrEmpty(local) ? null : Path.Combine(local, "PBSLoaderCommonUtils");
+        }
 
         internal static Decisao Consultar(string sha)
         {
@@ -38,6 +46,7 @@ namespace PBSLoaderCommonUtils.Conteudo
             if (d == Decisao.Permitir) _gravadas[p.Sha256] = "permitir";
             else if (d == Decisao.SempreRecusar) _gravadas[p.Sha256] = "sempre-recusar";
             else return;
+            if (Dir == null) { MelonLogger.Warning("[Conteudo] sem pasta de dados do usuário: a decisão vale só nesta sessão"); return; }
             try
             {
                 Directory.CreateDirectory(Dir);
@@ -53,23 +62,32 @@ namespace PBSLoaderCommonUtils.Conteudo
             if (_gravadas != null) return;
             _gravadas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _catalogo = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            try
+            if (Dir != null)
             {
-                var a = Path.Combine(Dir, "confianca.json");
-                if (File.Exists(a))
+                foreach (var kv in LerDecisoes(Path.Combine(Dir, "confianca.json"))) _gravadas[kv.Key] = kv.Value;
+                try
                 {
-                    var lido = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(a));
-                    if (lido != null) foreach (var kv in lido) _gravadas[kv.Key] = kv.Value;
+                    var c = Path.Combine(Dir, "confiaveis.txt");
+                    if (File.Exists(c))
+                        foreach (var l in File.ReadAllLines(c)) { var t = l.Trim(); if (t.Length == 64) _catalogo.Add(t); }
                 }
+                catch (Exception e) { MelonLogger.Warning("[Conteudo] confiaveis.txt ilegível: " + e.Message); }
             }
-            catch (Exception e) { MelonLogger.Warning("[Conteudo] confianca.json ilegível, perguntando de novo: " + e.Message); }
+            // O arquivo antigo, na pasta do jogo, não é aproveitado: qualquer decisão ali pode ter vindo junto com um pacote.
+            var antigas = LerDecisoes(Path.Combine(DirAntigo, "confianca.json"));
+            if (antigas.Count > 0)
+                MelonLogger.Msg($"[Conteudo] {antigas.Count} decisão(ões) de UserData/PBSLoaderCommonUtils/confianca.json ignoradas: esses pacotes vão perguntar de novo");
+        }
+
+        static Dictionary<string, string> LerDecisoes(string arquivo)
+        {
             try
             {
-                var c = Path.Combine(Dir, "confiaveis.txt");
-                if (File.Exists(c))
-                    foreach (var l in File.ReadAllLines(c)) { var t = l.Trim(); if (t.Length == 64) _catalogo.Add(t); }
+                if (File.Exists(arquivo))
+                    return JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(arquivo)) ?? new();
             }
-            catch { }
+            catch (Exception e) { MelonLogger.Warning($"[Conteudo] {arquivo} ilegível, perguntando de novo: " + e.Message); }
+            return new();
         }
     }
 

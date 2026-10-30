@@ -122,6 +122,7 @@ namespace PbsuLoader
                     continue;
                 if (!mod.Origem.Arquivo.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && !mod.Origem.Arquivo.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                     continue; // só sabemos instalar uma DLL em Mods ou um zip na pasta do jogo
+                if (!ArquivoSemPasta(mod.Origem.Arquivo)) continue;
                 if (mod.Pagina == null) mod.Pagina = "https://github.com/" + mod.Origem.Repo;
                 mod.Dependencias.AddRange(Json.Lista(m, "dependencias").OfType<string>());
                 mod.VersoesDoJogo.AddRange(Json.Lista(m, "versoesDoJogo").OfType<string>());
@@ -142,5 +143,8 @@ namespace PbsuLoader
             }
             return c;
         }
+
+        static bool ArquivoSemPasta(string arquivo)
+            => arquivo.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 && !arquivo.StartsWith(".");
     }
 }

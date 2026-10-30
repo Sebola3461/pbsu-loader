@@ -35,6 +35,7 @@ namespace PbsuLoader
                 // --dev: os builds locais das pastas de desenvolvimento valem no lugar dos releases.
                 var builds = args.Contains("--dev") ? Local.Builds(Local.Pastas) : new Dictionary<string, string>();
                 var reg = Registro.Abrir(jogo);
+                reg.AvisarIgnorados(L);
                 foreach (var m in cat.Mods)
                 {
                     // Um mod com erro não impede os outros de atualizar.

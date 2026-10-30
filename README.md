@@ -95,7 +95,7 @@ no catálogo, também por pull request, e rodam sem perguntar:
 ]
 ```
 
-O instalador grava esses hashes em `UserData/PBSLoaderCommonUtils/confiaveis.txt` sempre que aplica. Uma DLL nova (outro
+O instalador grava esses hashes em `%LOCALAPPDATA%\PBSLoaderCommonUtils\confiaveis.txt` sempre que aplica. Uma DLL nova (outro
 hash) volta a perguntar até entrar no catálogo de novo. No pull request, mande o código-fonte do pacote junto (ou um link
 para ele): a revisão é do código, não só do arquivo.
 

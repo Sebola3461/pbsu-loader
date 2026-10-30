@@ -583,9 +583,11 @@ jogador vê o nome, o autor, a origem e o SHA-256 da DLL, e escolhe:
 - **Agora não:** vale só para esta sessão.
 - **Nunca:** fica gravado.
 
-As decisões ficam em `UserData/PBSLoaderCommonUtils/confianca.json`, por hash. Uma DLL atualizada tem outro hash e
-pergunta de novo. Hashes listados em `UserData/PBSLoaderCommonUtils/confiaveis.txt` (um por linha) já vêm permitidos;
-esse arquivo é para o PBSU Loader gravar a partir do catálogo.
+As decisões ficam em `%LOCALAPPDATA%\PBSLoaderCommonUtils\confianca.json`, por hash. Uma DLL atualizada tem outro hash e
+pergunta de novo. Hashes listados em `%LOCALAPPDATA%\PBSLoaderCommonUtils\confiaveis.txt` (um por linha) já vêm
+permitidos; esse arquivo é para o PBSU Loader gravar a partir do catálogo. Os dois ficam fora da pasta do jogo de
+propósito: um ônibus ou mapa extraído nela não consegue trazer a própria permissão. O arquivo antigo
+(`UserData/PBSLoaderCommonUtils/confianca.json`) não é lido: quem atualizar responde de novo uma vez por pacote.
 
 A PBSLoaderCommonInterface desenha a pergunta e tem a página **Scripts de ônibus e mapa** no menu **Mods**. Por código:
 `Pacotes.Todos` lista os pacotes vistos na sessão (com `Estado`, `Detalhe` e `QuantosScripts`), `Pacotes.Permissao(p)`

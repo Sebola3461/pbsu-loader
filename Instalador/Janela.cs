@@ -165,6 +165,7 @@ namespace PbsuLoader
             _versaoJogo = Jogo.Versao(_jogo, _cat, out _);
             _versaoMelon = Jogo.VersaoMelon(_jogo);
             _reg = Registro.Abrir(_jogo);
+            _reg.AvisarIgnorados(Log);
             var builds = _pastasDev != null ? Local.Builds(_pastasDev) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var m in _cat.Mods)
             {

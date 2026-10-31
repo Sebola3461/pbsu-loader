@@ -287,6 +287,7 @@ namespace PbsuLoader
             string cabeca = e.Mod.Nome + (e.Mod.Autor.Length > 0 ? " — por " + e.Mod.Autor : "");
             string texto = cabeca + ". " + e.Mod.Descricao;
             if (e.Mod.Dependencias.Count > 0) texto += " Precisa de: " + string.Join(", ", e.Mod.Dependencias) + ".";
+            if (e.Mod.Community) texto += e.Mod.Trusted ? " Da comunidade, de autor confiável." : " Da comunidade, sem revisão.";
             if (e.Detalhe.Length > 0) texto += " (" + e.Detalhe + ")";
             if (e.Mod.Pagina == null) { _detalhe.Text = texto; return; } // build local fora do catálogo
             const string pagina = "  Página do mod";
@@ -395,7 +396,10 @@ namespace PbsuLoader
             resumo.AddRange(instalar.Select(e => (e.Situacao == Situacao.NaoInstalado ? "Instalar " : "Atualizar ") + e.Mod.Nome + " " + (e.Local != null ? "(build local)" : e.Remoto.Versao)));
             resumo.AddRange(remover.Select(e => "Remover " + e.Mod.Nome));
             if (semRelease.Count > 0) resumo.Add("(sem release, ficam de fora: " + string.Join(", ", semRelease) + ")");
-            if (MessageBox.Show(this, string.Join("\n", resumo), "Confirmar", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+            string warning = Instalacao.UnreviewedWarning(instalar);
+            if (warning != null) resumo.Add("\n" + warning);
+            var icon = warning != null ? MessageBoxIcon.Warning : MessageBoxIcon.Question;
+            if (MessageBox.Show(this, string.Join("\n", resumo), "Confirmar", MessageBoxButtons.OKCancel, icon) != DialogResult.OK)
                 return;
 
             Rodar("Aplicando...", () =>

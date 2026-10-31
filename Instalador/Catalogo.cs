@@ -27,6 +27,10 @@ namespace PbsuLoader
         public string Id, Nome, Descricao, Autor, Estado, Pagina;
         public Origem Origem;
         public bool Obrigatorio, Padrao;
+        /// <summary>Veio do catálogo da comunidade (pbs-loader-catalogo): entrou sem revisão humana.</summary>
+        public bool Community;
+        /// <summary>Autor marcado como confiável pelos moderadores do catálogo da comunidade.</summary>
+        public bool Trusted;
         public List<string> Dependencias = new List<string>();
         public List<string> VersoesDoJogo = new List<string>(); // vazio = não declarou
     }
@@ -49,6 +53,7 @@ namespace PbsuLoader
     class Catalogo
     {
         public const string Url = "https://raw.githubusercontent.com/Sebola3461/pbsu-loader/main/catalogo.json";
+        public const string CommunityUrl = "https://sebola3461.github.io/pbs-loader-catalogo/community-catalog.json";
 
         public Origem Instalador;
         public string MelonVersao, MelonUrl, MelonSha256;
@@ -61,17 +66,38 @@ namespace PbsuLoader
 
         public ModDoCatalogo Mod(string id) => Mods.FirstOrDefault(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase));
 
-        /// <summary>PBSU_CATALOGO (caminho ou URL) troca a fonte, para testar um catálogo antes do pull request.</summary>
+        /// <summary>
+        /// PBSU_CATALOGO (caminho ou URL) troca a fonte, para testar um catálogo antes do pull request;
+        /// PBSU_CATALOGO_COMUNIDADE faz o mesmo com o catálogo da comunidade.
+        /// </summary>
         public static Catalogo Carregar(Action<string> log)
         {
-            string fonte = Environment.GetEnvironmentVariable("PBSU_CATALOGO");
-            if (string.IsNullOrEmpty(fonte)) fonte = Url;
+            var c = LoadBase(log);
+            string community = SourceFromEnvironment("PBSU_CATALOGO_COMUNIDADE", CommunityUrl);
+            if (c.Fonte == EmbeddedSource && IsUrl(community))
+            {
+                log("Sem rede: seguindo sem o catálogo da comunidade.");
+                return c;
+            }
             try
             {
-                string texto = fonte.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                    ? Rede.BaixarTexto(fonte)
-                    : File.ReadAllText(fonte, Encoding.UTF8);
-                var c = Ler(texto);
+                int added = c.MergeCommunity(ReadSource(community));
+                log("Catálogo da comunidade: " + added + " plugin(s).");
+            }
+            catch (Exception e)
+            {
+                // Sem cópia embutida: um catálogo velho mostraria mods que os moderadores já tiraram.
+                log("Não consegui ler o catálogo da comunidade de " + community + " (" + e.Message + "). Seguindo só com o catálogo base.");
+            }
+            return c;
+        }
+
+        static Catalogo LoadBase(Action<string> log)
+        {
+            string fonte = SourceFromEnvironment("PBSU_CATALOGO", Url);
+            try
+            {
+                var c = Ler(ReadSource(fonte));
                 c.Fonte = fonte;
                 return c;
             }
@@ -82,10 +108,65 @@ namespace PbsuLoader
                 using (var r = new StreamReader(s, Encoding.UTF8))
                 {
                     var c = Ler(r.ReadToEnd());
-                    c.Fonte = "cópia embutida";
+                    c.Fonte = EmbeddedSource;
                     return c;
                 }
             }
+        }
+
+        static string SourceFromEnvironment(string variable, string fallback)
+        {
+            string value = Environment.GetEnvironmentVariable(variable);
+            return string.IsNullOrEmpty(value) ? fallback : value;
+        }
+
+        const string EmbeddedSource = "cópia embutida";
+
+        static bool IsUrl(string source) => source.StartsWith("http", StringComparison.OrdinalIgnoreCase);
+
+        static string ReadSource(string source) => IsUrl(source) ? Rede.BaixarTexto(source) : File.ReadAllText(source, Encoding.UTF8);
+
+        /// <summary>
+        /// Só entra .dll do tipo plugin (zip de terceiros seria extraído na pasta do jogo), nunca como obrigatório ou
+        /// padrão. Id ou nome de arquivo já usado fica com quem chegou antes, para um plugin da comunidade não
+        /// sobrescrever (nem apagar ao desinstalar) a DLL de outro mod.
+        /// Devolve quantos entraram.
+        /// </summary>
+        public int MergeCommunity(string text)
+        {
+            var added = new List<ModDoCatalogo>();
+            foreach (var m in Json.Lista(Json.Ler(text), "mods"))
+            {
+                if (!string.Equals(Json.Texto(m, "tipo"), "plugin", StringComparison.Ordinal)) continue;
+                var mod = ReadMod(m);
+                if (mod == null || !mod.Origem.Arquivo.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
+                if (Mod(mod.Id) != null || UsesFile(mod.Origem.Arquivo)) continue;
+                mod.Obrigatorio = mod.Padrao = false;
+                mod.Community = true;
+                mod.Trusted = Json.Bool(m, "confiavel");
+                mod.Estado = mod.Trusted ? "comunidade, confiável" : "comunidade";
+                Mods.Add(mod);
+                added.Add(mod);
+            }
+            DropMissingDependencies(added);
+            return added.Count(m => Mods.Contains(m));
+        }
+
+        bool UsesFile(string file) => Mods.Any(m => string.Equals(m.Origem.Arquivo, file, StringComparison.OrdinalIgnoreCase));
+
+        void DropMissingDependencies(List<ModDoCatalogo> community)
+        {
+            bool removed;
+            do
+            {
+                removed = false;
+                foreach (var mod in community.Where(m => Mods.Contains(m)).ToList())
+                {
+                    if (mod.Dependencias.All(d => Mod(d) != null)) continue;
+                    Mods.Remove(mod);
+                    removed = true;
+                }
+            } while (removed);
         }
 
         public static Catalogo Ler(string texto)
@@ -105,29 +186,7 @@ namespace PbsuLoader
                 c.VersoesDoJogo.Add(new VersaoDoJogo { Nome = Json.Texto(v, "nome"), Sha256 = Json.Texto(v, "gameassembly_sha256") });
 
             foreach (var m in Json.Lista(raiz, "mods"))
-            {
-                var mod = new ModDoCatalogo
-                {
-                    Id = Json.Texto(m, "id"),
-                    Nome = Json.Texto(m, "nome") ?? Json.Texto(m, "id"),
-                    Descricao = Json.Texto(m, "descricao", ""),
-                    Autor = Json.Texto(m, "autor", ""),
-                    Estado = Json.Texto(m, "estado", ""),
-                    Pagina = Json.Texto(m, "pagina"),
-                    Origem = Origem.De(m),
-                    Obrigatorio = Json.Bool(m, "obrigatorio"),
-                    Padrao = Json.Bool(m, "padrao"),
-                };
-                if (string.IsNullOrEmpty(mod.Id) || string.IsNullOrEmpty(mod.Origem.Repo) || string.IsNullOrEmpty(mod.Origem.Arquivo))
-                    continue;
-                if (!mod.Origem.Arquivo.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && !mod.Origem.Arquivo.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                    continue; // só sabemos instalar uma DLL em Mods ou um zip na pasta do jogo
-                if (!ArquivoSemPasta(mod.Origem.Arquivo)) continue;
-                if (mod.Pagina == null) mod.Pagina = "https://github.com/" + mod.Origem.Repo;
-                mod.Dependencias.AddRange(Json.Lista(m, "dependencias").OfType<string>());
-                mod.VersoesDoJogo.AddRange(Json.Lista(m, "versoesDoJogo").OfType<string>());
-                c.Mods.Add(mod);
-            }
+                if (ReadMod(m) is ModDoCatalogo mod) c.Mods.Add(mod);
 
             foreach (var s in Json.Lista(raiz, "scriptsConfiaveis"))
             {
@@ -142,6 +201,31 @@ namespace PbsuLoader
                 });
             }
             return c;
+        }
+
+        static ModDoCatalogo ReadMod(object m)
+        {
+            var mod = new ModDoCatalogo
+            {
+                Id = Json.Texto(m, "id"),
+                Nome = Json.Texto(m, "nome") ?? Json.Texto(m, "id"),
+                Descricao = Json.Texto(m, "descricao", ""),
+                Autor = Json.Texto(m, "autor", ""),
+                Estado = Json.Texto(m, "estado", ""),
+                Pagina = Json.Texto(m, "pagina"),
+                Origem = Origem.De(m),
+                Obrigatorio = Json.Bool(m, "obrigatorio"),
+                Padrao = Json.Bool(m, "padrao"),
+            };
+            if (string.IsNullOrEmpty(mod.Id) || string.IsNullOrEmpty(mod.Origem.Repo) || string.IsNullOrEmpty(mod.Origem.Arquivo))
+                return null;
+            if (!mod.Origem.Arquivo.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && !mod.Origem.Arquivo.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                return null; // só sabemos instalar uma DLL em Mods ou um zip na pasta do jogo
+            if (!ArquivoSemPasta(mod.Origem.Arquivo)) return null;
+            if (mod.Pagina == null) mod.Pagina = "https://github.com/" + mod.Origem.Repo;
+            mod.Dependencias.AddRange(Json.Lista(m, "dependencias").OfType<string>());
+            mod.VersoesDoJogo.AddRange(Json.Lista(m, "versoesDoJogo").OfType<string>());
+            return mod;
         }
 
         static bool ArquivoSemPasta(string arquivo)

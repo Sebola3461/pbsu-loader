@@ -125,6 +125,19 @@ namespace PbsuLoader
             }
         }
 
+        /// <summary>
+        /// Aviso para mods da comunidade sem autor confiável que vão entrar pela primeira vez, ou null. Recebe a lista
+        /// já com as dependências marcadas sozinhas, então o aviso também vale para elas.
+        /// </summary>
+        public static string UnreviewedWarning(IEnumerable<EstadoMod> toInstall)
+        {
+            var names = toInstall.Where(e => e.Mod.Community && !e.Mod.Trusted && !e.Presente).Select(e => e.Mod.Nome).ToList();
+            if (names.Count == 0) return null;
+            return "Atenção: " + string.Join(", ", names) + (names.Count == 1 ? " é um mod" : " são mods") +
+                " da comunidade que ninguém revisou. Um plugin roda com as mesmas permissões que você no computador. " +
+                "Só continue se confia no autor.";
+        }
+
         /// <param name="local">Build local do mod (modo desenvolvedor), ou null para usar o release.</param>
         public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre, string local = null)
         {
@@ -204,6 +217,8 @@ namespace PbsuLoader
                 log("  " + e.Mod.Nome + " copiado do build local (" + e.Local + ").");
                 return;
             }
+            if (e.Mod.Community && e.Remoto.Sha256 == null)
+                throw new InvalidOperationException(e.Mod.Nome + " " + e.Remoto.Versao + " está sem sha256 no GitHub; o autor precisa publicar o release de novo.");
             log("Baixando " + e.Mod.Nome + " " + e.Remoto.Versao + "...");
             string tmp = Rede.Baixar(e.Remoto.Url, e.Remoto.Sha256);
             try

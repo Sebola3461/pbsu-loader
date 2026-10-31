@@ -2,6 +2,14 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## Instalador (não lançado)
+
+- Lê também o catálogo da comunidade (`pbs-loader-catalogo`, publicado no GitHub Pages). Entram só plugins `.dll`; ônibus, mapas e outros tipos ficam no site. `PBSU_CATALOGO_COMUNIDADE` troca a fonte para testes.
+- Um mod da comunidade nunca é obrigatório nem vem marcado, não pode usar o id nem o nome de arquivo de outro mod, e sai da lista se faltar alguma dependência.
+- Antes de instalar pela primeira vez um mod da comunidade de autor não confiável, a confirmação avisa que ninguém revisou o mod.
+- Mod da comunidade sem SHA-256 no GitHub não é baixado.
+- Sem rede para o catálogo base, não tenta baixar o da comunidade.
+
 ## Instalador 0.1.0 (2026-10-30)
 
 Primeira versão de teste.

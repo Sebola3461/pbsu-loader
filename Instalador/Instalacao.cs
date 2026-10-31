@@ -281,7 +281,7 @@ namespace PbsuLoader
                 if (PastaDeConfianca == null) { log("Sem pasta de dados do usuário: os scripts revisados vão perguntar antes de rodar."); return; }
                 var arq = Path.Combine(PastaDeConfianca, "confiaveis.txt");
                 var sb = new StringBuilder();
-                sb.Append("# Scripts de ônibus e mapa revisados no catálogo do PBSU Loader. Este arquivo é reescrito pelo instalador.\n");
+                sb.Append("# Scripts de ônibus e mapa revisados no catálogo do PBSLoader. Este arquivo é reescrito pelo instalador.\n");
                 foreach (var s in c.ScriptsConfiaveis)
                 {
                     sb.Append("# ").Append(s.Nome);

@@ -1,4 +1,4 @@
-# PBSU Loader
+# PBSLoader
 
 Modloader para o Proton Bus Simulator Urbano clássico. O repositório tem quatro coisas:
 

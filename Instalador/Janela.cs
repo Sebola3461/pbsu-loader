@@ -48,7 +48,7 @@ namespace PbsuLoader
         public Janela(string[] args)
         {
             _args = args;
-            Text = "PBSU Loader " + Programa.Versao;
+            Text = "PBSLoader " + Programa.Versao;
             Font = new Font("Segoe UI", 9f);
             AutoScaleMode = AutoScaleMode.Dpi;
             ClientSize = new Size(860, 640);

@@ -1,6 +1,6 @@
 # PBSLoaderCommonInterface
 
-Interface comum do PBSU Loader, instalada sempre junto com a PBSLoaderCommonUtils. Visual de jogos de corrida: painéis
+Interface comum do PBSLoader, instalada sempre junto com a PBSLoaderCommonUtils. Visual de jogos de corrida: painéis
 chapados, destaque em vermelho e títulos em itálico.
 
 - Menus, telas de seleção e formulários redesenhados. O jogo continua por baixo: cada botão chama o original.
@@ -76,7 +76,7 @@ gravados em disco.
 
 ## Para outros mods
 
-A PBSLoaderCommonInterface é base do PBSU Loader: declare a dependência e chame direto.
+A PBSLoaderCommonInterface é base do PBSLoader: declare a dependência e chame direto.
 
 ```csharp
 [assembly: MelonAdditionalDependencies("PBSLoaderCommonUtils", "PBSLoaderCommonInterface")]

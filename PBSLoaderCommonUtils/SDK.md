@@ -34,7 +34,7 @@ MelonLoader 0.7.3.
 
 ## Começando
 
-Referencie `PBSLoaderCommonUtils.dll` (está na pasta `Mods` do jogo depois que o PBSU Loader a instala) com
+Referencie `PBSLoaderCommonUtils.dll` (está na pasta `Mods` do jogo depois que o PBSLoader a instala) com
 `Private=false`, e declare a dependência:
 
 ```csharp
@@ -482,7 +482,7 @@ Gravidades: `Info`, `Aviso` e `Falha`. `Avisos.Ativos` lista os ativos, `Avisos.
 
 ## Interface: menu, painéis e HUD
 
-A parte visual fica na outra base do PBSU Loader, a **PBSLoaderCommonInterface** (sempre instalada; declare
+A parte visual fica na outra base do PBSLoader, a **PBSLoaderCommonInterface** (sempre instalada; declare
 `[assembly: MelonAdditionalDependencies("PBSLoaderCommonUtils", "PBSLoaderCommonInterface")]`):
 
 - `PainelMods`: botões, sliders, nome e ícone do mod no menu **Mods** (as preferências já aparecem sozinhas).
@@ -500,7 +500,7 @@ Quando o SDK ainda não expõe algo, `Avancado` dá os componentes por trás das
 fazem o mesmo para cada objeto.
 
 Os campos desses componentes são os do jogo e podem mudar a cada versão dele; por isso tudo aqui é null no modo seguro. Se você precisa de algo, peça no
-repositório do PBSU Loader para entrar no SDK.
+repositório do PBSLoader para entrar no SDK.
 
 ## Scripts de conteúdo (ônibus e mapas)
 
@@ -585,7 +585,7 @@ jogador vê o nome, o autor, a origem e o SHA-256 da DLL, e escolhe:
 
 As decisões ficam em `%LOCALAPPDATA%\PBSLoaderCommonUtils\confianca.json`, por hash. Uma DLL atualizada tem outro hash e
 pergunta de novo. Hashes listados em `%LOCALAPPDATA%\PBSLoaderCommonUtils\confiaveis.txt` (um por linha) já vêm
-permitidos; esse arquivo é para o PBSU Loader gravar a partir do catálogo. Os dois ficam fora da pasta do jogo de
+permitidos; esse arquivo é para o PBSLoader gravar a partir do catálogo. Os dois ficam fora da pasta do jogo de
 propósito: um ônibus ou mapa extraído nela não consegue trazer a própria permissão. O arquivo antigo
 (`UserData/PBSLoaderCommonUtils/confianca.json`) não é lido: quem atualizar responde de novo uma vez por pacote.
 

@@ -27,7 +27,7 @@ namespace PBSLoaderCommonUtils
         public static bool Requer(string versaoMinima, string mod)
         {
             if (Version.TryParse(Versao, out var atual) && Version.TryParse(versaoMinima, out var min) && atual >= min) return true;
-            MelonLogger.Error($"[{mod}] precisa da PBSLoaderCommonUtils {versaoMinima} ou mais nova (instalada: {Versao}). Atualize pelo PBSU Loader.");
+            MelonLogger.Error($"[{mod}] precisa da PBSLoaderCommonUtils {versaoMinima} ou mais nova (instalada: {Versao}). Atualize pelo PBSLoader.");
             Avisos.Notificar("PBSLoaderCommonUtils", "requer-" + mod, Gravidade.Falha, $"{mod} precisa de uma PBSLoaderCommonUtils mais nova",
                 $"instalada {Versao}, pedida {versaoMinima}", 30f);
             return false;

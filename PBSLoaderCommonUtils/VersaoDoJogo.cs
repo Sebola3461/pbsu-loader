@@ -82,7 +82,7 @@ namespace PBSLoaderCommonUtils
             _proximoAviso = Time.unscaledTime + 0.5f;
             Avisos.Definir("PBSLoaderCommonUtils", "versao-do-jogo", Sdk.ModoSeguro && Veiculos.Veiculo.Existe, Gravidade.Falha,
                 "Versão do jogo não testada: mods em modo seguro",
-                "Atualize o PBSU Loader, ou ligue \"Permitir versão do jogo não testada\" se souber que os mods funcionam nesta versão");
+                "Atualize o PBSLoader, ou ligue \"Permitir versão do jogo não testada\" se souber que os mods funcionam nesta versão");
         }
     }
 }

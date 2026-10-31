@@ -12,7 +12,7 @@ namespace PBSLoaderCommonUtils.Conteudo
 
     // Decisões do jogador por SHA-256 da DLL (%LOCALAPPDATA%/PBSLoaderCommonUtils/confianca.json). "Recusar" vale só
     // para esta sessão; "Permitir" e "Sempre recusar" ficam gravados. Um hash novo (pacote atualizado) pergunta
-    // de novo. Hashes em confiaveis.txt (um por linha, gravado pelo PBSU Loader a partir do catálogo) já vêm permitidos.
+    // de novo. Hashes em confiaveis.txt (um por linha, gravado pelo PBSLoader a partir do catálogo) já vêm permitidos.
     // Os dois arquivos ficam fora da pasta do jogo: um ônibus ou mapa extraído nela poderia trazer um "permitir" pronto.
     internal static class Confianca
     {

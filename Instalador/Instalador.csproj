@@ -8,7 +8,7 @@
     <AssemblyName>PbsuLoader</AssemblyName>
     <RootNamespace>PbsuLoader</RootNamespace>
     <Version>0.1.0</Version>
-    <Product>PBSU Loader</Product>
+    <Product>PBSLoader</Product>
     <Description>Instalador do MelonLoader e dos mods do Proton Bus Simulator</Description>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>

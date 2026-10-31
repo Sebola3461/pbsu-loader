@@ -10,7 +10,7 @@ Base comum dos mods:
 - **Ar comprimido:** compressor movido pelo motor, reservatório, governador com purga, freio a ar e freio de molas.
   Esta é a única parte que muda o jogo sozinha. Para desligar, use `ArAtivo` nas preferências.
 
-O [instalador do PBSU Loader](../README.md) instala a PBSLoaderCommonUtils junto com o MelonLoader. Para instalar à mão, copie
+O [instalador do PBSLoader](../README.md) instala a PBSLoaderCommonUtils junto com o MelonLoader. Para instalar à mão, copie
 `PBSLoaderCommonUtils.dll` para a pasta `Mods`, junto com os mods que a usam.
 
 ## Para quem joga
@@ -53,8 +53,8 @@ O freio a ar só atua em veículos com física VPP. Em veículos EVP5 a simulaç
 ## Versão do jogo
 
 A PBSLoaderCommonUtils confere a versão do jogo pelo `GameAssembly.dll`. Numa versão em que os mods não foram testados,
-eles ficam em **modo seguro**: continuam lendo o jogo, mas não mexem nele, e uma falha na tela avisa. Atualize o PBSU
-Loader quando o jogo atualizar. Quem sabe que os mods funcionam na versão nova pode ligar `PermitirVersaoNaoTestada` em
+eles ficam em **modo seguro**: continuam lendo o jogo, mas não mexem nele, e uma falha na tela avisa. Atualize o PBSLoader
+quando o jogo atualizar. Quem sabe que os mods funcionam na versão nova pode ligar `PermitirVersaoNaoTestada` em
 `[PBSLoaderCommonUtils]` no `MelonPreferences.cfg` (ou no menu Mods).
 
 ## Para quem faz mods

@@ -17,7 +17,7 @@ namespace PBSLoaderCommonInterface
     //
     // "categoria" é o Identifier da MelonPreferences_Category do mod.
     //
-    // A PBSLoaderCommonInterface é base do PBSU Loader (sempre instalada), então é só chamar, de preferência no
+    // A PBSLoaderCommonInterface é base do PBSLoader (sempre instalada), então é só chamar, de preferência no
     // OnLateInitializeMelon (quando todas as categorias de preferências já existem):
     //
     //   [assembly: MelonAdditionalDependencies("PBSLoaderCommonUtils", "PBSLoaderCommonInterface")]

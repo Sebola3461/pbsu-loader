@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
@@ -26,7 +27,13 @@ namespace PbsuLoader
             Application.SetCompatibleTextRenderingDefault(false);
             // O site oferece "Instalar pelo loader" (pbsloader://mod/<id>): o protocolo aponta para este .exe.
             Protocolo.Registrar();
-            Application.Run(new Janela(args));
+            var idDoSite = args.Select(Protocolo.IdDoArgumento).FirstOrDefault(i => i != null);
+            // Uma janela só: abrir de novo (inclusive pelo link do site) encaminha o id e sai — duas instâncias
+            // brigariam pelo limite de consultas do GitHub e pelos arquivos do jogo.
+            Janela janela = null;
+            if (!InstanciaUnica.Entrar(idDoSite, mensagem => janela?.ReceberDoSite(mensagem))) return;
+            janela = new Janela(args);
+            Application.Run(janela);
         }
     }
 

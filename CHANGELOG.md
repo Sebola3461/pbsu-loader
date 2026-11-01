@@ -2,6 +2,11 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## Instalador 0.2.1 (2026-10-31)
+
+- Uma instância só: abrir de novo (inclusive pelo link do site) encaminha o pedido para a janela que já está aberta, em vez de abrir outra brigando por consultas do GitHub e pelos arquivos do jogo.
+- O link `pbsloader://mod/<id>` não atrapalha mais a detecção do jogo: a URL não é mais tratada como pasta do jogo.
+
 ## Instalador 0.2.0 (2026-10-31)
 
 - Lê também o catálogo da comunidade (`pbs-loader-catalogo`, publicado no GitHub Pages). Entram todos os tipos: plugin como `.dll` pelo GitHub; ônibus, mapa e outros como `.zip` — release do GitHub ou origem externa por https. `PBSU_CATALOGO_COMUNIDADE` troca a fonte para testes.

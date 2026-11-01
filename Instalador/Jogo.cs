@@ -18,8 +18,9 @@ namespace PbsuLoader
         public static string Procurar(Catalogo c, string[] args)
         {
             var candidatos = new List<string>();
-            // Pasta dada na linha de comando: só ela vale. Procurar outra seria aplicar em um jogo que a pessoa não pediu.
-            var explicitas = args.Where(a => !a.StartsWith("--")).ToList();
+            // Pasta dada na linha de comando: só ela vale. Procurar outra seria aplicar em um jogo que a pessoa não
+            // pediu. A URL do site chega pelo mesmo caminho e não é pasta — senão a detecção do jogo morria.
+            var explicitas = args.Where(a => !a.StartsWith("--") && !a.StartsWith(Protocolo.Esquema + "://")).ToList();
             if (explicitas.Count > 0)
             {
                 foreach (var p in explicitas)

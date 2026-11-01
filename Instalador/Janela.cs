@@ -18,6 +18,7 @@ namespace PbsuLoader
         readonly string[] _args;
         readonly string _modDoSite; // id vindo de pbsloader://mod/<id>: pré-selecionado na primeira lista
         bool _escolhidoDoSite;
+        readonly Queue<string> _pendentes = new Queue<string>(); // ids chegando pelo pipe, para a próxima lista
         Catalogo _cat;
         string _jogo, _versaoJogo, _versaoMelon;
         Registro _reg;
@@ -543,18 +544,25 @@ namespace PbsuLoader
             Close();
         }
 
-        // O site pediu pbsloader://mod/<id>: marca o mod (com as dependências dele), mostra na lista e avisa no log.
-        // Tenta a cada verificação até conseguir; depois para, para não remarcar o que o usuário desmarcar à mão.
+        // Pedidos do site: a fila leva os ids vindos do pipe; o id da linha de comando insiste até a lista existir,
+        // e para depois (para não remarcar o que o usuário desmarcar à mão).
         void EscolherModDoSite()
         {
-            if (_escolhidoDoSite || _modDoSite == null || _lista.Items.Count == 0) return;
+            if (_lista.Items.Count == 0) return; // sem lista, não há onde marcar: os pedidos ficam na fila
+            while (_pendentes.Count > 0) TentarEscolher(_pendentes.Dequeue());
+            if (_escolhidoDoSite || _modDoSite == null) return;
             _escolhidoDoSite = true;
+            TentarEscolher(_modDoSite);
+        }
+
+        bool TentarEscolher(string id)
+        {
             var item = _lista.Items.Cast<ListViewItem>().FirstOrDefault(it =>
-                string.Equals(((EstadoMod)it.Tag).Mod.Id, _modDoSite, StringComparison.OrdinalIgnoreCase));
+                string.Equals(((EstadoMod)it.Tag).Mod.Id, id, StringComparison.OrdinalIgnoreCase));
             if (item == null)
             {
-                Log("O site pediu o mod \"" + _modDoSite + "\", mas ele não está no catálogo.");
-                return;
+                Log("O site pediu o mod \"" + id + "\", mas ele não está no catálogo.");
+                return false;
             }
             _marcando = true;
             try { item.Checked = true; Normalizar(); }
@@ -563,6 +571,19 @@ namespace PbsuLoader
             item.Focused = true;
             item.EnsureVisible();
             Log("O site pediu o mod \"" + ((EstadoMod)item.Tag).Mod.Nome + "\": marcado para instalar — clique em \"Aplicar\".");
+            return true;
+        }
+
+        /// <summary>Mensagem de outra instância (via pipe): um id para pré-selecionar, ou vazio para vir à frente.</summary>
+        public void ReceberDoSite(string mensagem)
+        {
+            if (InvokeRequired) { BeginInvoke((Action<string>)ReceberDoSite, mensagem); return; }
+            var id = (mensagem ?? "").Trim();
+            if (id.Length == 0) { Activate(); WindowState = FormWindowState.Normal; return; }
+            if (!Protocolo.IdValido(id)) { Log("O site pediu um id de mod inválido."); return; }
+            if (_ocupado) { _pendentes.Enqueue(id); return; } // aplicação em curso: entra quando a lista voltar
+            _pendentes.Enqueue(id);
+            EscolherModDoSite();
         }
 
         void Habilitar()

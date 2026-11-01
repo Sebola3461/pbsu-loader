@@ -7,7 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PbsuLoader</AssemblyName>
     <RootNamespace>PbsuLoader</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Product>PBSLoader</Product>
     <Description>Instalador do MelonLoader e dos mods do Proton Bus Simulator</Description>
     <LangVersion>latest</LangVersion>

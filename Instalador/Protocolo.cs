@@ -48,7 +48,7 @@ namespace PbsuLoader
             return IdValido(resto) ? resto : null;
         }
 
-        static bool IdValido(string id)
+        internal static bool IdValido(string id)
             => id.Length > 0 && id.Length <= 64 && id.All(c => char.IsLetterOrDigit(c) || c == '_' || c == '-');
     }
 }

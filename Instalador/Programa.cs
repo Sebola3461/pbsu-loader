@@ -11,6 +11,8 @@ namespace PbsuLoader
     {
         public static readonly string Versao = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 
+        public static string Executavel => Process.GetCurrentProcess().MainModule.FileName;
+
         [STAThread]
         static void Main(string[] args)
         {
@@ -22,6 +24,8 @@ namespace PbsuLoader
             }
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            // O site oferece "Instalar pelo loader" (pbsloader://mod/<id>): o protocolo aponta para este .exe.
+            Protocolo.Registrar();
             Application.Run(new Janela(args));
         }
     }
@@ -32,7 +36,7 @@ namespace PbsuLoader
     /// </summary>
     static class AutoAtualizacao
     {
-        static string Atual => Process.GetCurrentProcess().MainModule.FileName;
+        static string Atual => Programa.Executavel;
 
         public static void LimparVersaoAntiga(string[] args)
         {

@@ -77,18 +77,29 @@ namespace PbsuLoader.Testes
         }
 
         [Fact]
-        public void MergeCommunity_SoPluginDll()
+        public void MergeCommunity_AceitaZipDeOutrosTiposEExternaHttps()
         {
             var c = Catalogo.Ler(Base);
             int added = c.MergeCommunity(Community(
                 "{ \"id\": \"Onibus\", \"tipo\": \"onibus\", \"repo\": \"a/b\", \"tag\": \"v\", \"arquivo\": \"Onibus.zip\" }",
+                "{ \"id\": \"Mapa\", \"tipo\": \"mapa\", \"origem\": \"externa\", \"url\": \"https://cdn.exemplo.com/mods/MapaLinha2.zip\" }",
                 "{ \"id\": \"PluginZip\", \"tipo\": \"plugin\", \"repo\": \"a/b\", \"tag\": \"v\", \"arquivo\": \"PluginZip.zip\" }",
-                "{ \"id\": \"Externo\", \"tipo\": \"plugin\", \"origem\": \"externa\", \"url\": \"https://mega.nz/x\" }",
+                "{ \"id\": \"ExternoHttp\", \"tipo\": \"mapa\", \"origem\": \"externa\", \"url\": \"http://cdn.exemplo.com/Inseguro.zip\" }",
                 "{ \"id\": \"Pasta\", \"tipo\": \"plugin\", \"repo\": \"a/b\", \"tag\": \"v\", \"arquivo\": \"..\\\\Pasta.dll\" }",
-                "{ \"id\": \"SemTipo\", \"repo\": \"a/b\", \"tag\": \"v\", \"arquivo\": \"SemTipo.dll\" }"));
+                "{ \"id\": \"SemTipo\", \"repo\": \"a/b\", \"tag\": \"v\", \"arquivo\": \"SemTipo.dll\" }",
+                "{ \"id\": \"ExternoSemNome\", \"tipo\": \"mapa\", \"origem\": \"externa\", \"url\": \"https://cdn.exemplo.com/pasta/\" }"));
 
-            Assert.Equal(0, added);
-            Assert.Single(c.Mods);
+            Assert.Equal(2, added);
+            var mapa = c.Mod("Mapa");
+            Assert.True(mapa.Origem.Externa);
+            Assert.Equal("https://cdn.exemplo.com/mods/MapaLinha2.zip", mapa.Origem.Url);
+            Assert.Equal("MapaLinha2.zip", mapa.Origem.Arquivo);
+            Assert.Equal("comunidade", c.Mod("Onibus").Estado);
+            Assert.Null(c.Mod("PluginZip"));       // plugin entra só como .dll
+            Assert.Null(c.Mod("ExternoHttp"));     // externa só https
+            Assert.Null(c.Mod("Pasta"));
+            Assert.Null(c.Mod("SemTipo"));         // sem tipo declarado, não entra da comunidade
+            Assert.Null(c.Mod("ExternoSemNome"));  // URL sem nome de arquivo
         }
 
         [Fact]
@@ -139,6 +150,35 @@ namespace PbsuLoader.Testes
             };
             var ex = Assert.Throws<InvalidOperationException>(() => Instalacao.Instalar(e, Path.GetTempPath(), null, _ => { }));
             Assert.Contains("sem sha256", ex.Message);
+        }
+
+        [Fact]
+        public void Instalar_ExternaNaoExigeSha_GithubComunidadeSemShaContinuaRecusado()
+        {
+            var github = new EstadoMod
+            {
+                Mod = new ModDoCatalogo { Id = "G", Nome = "G", Community = true, Origem = new Origem { Repo = "a/b", Arquivo = "G.dll" } },
+                Remoto = new Lancamento { Versao = "1.0", Url = "https://exemplo.invalid/G.dll", Sha256 = null },
+            };
+            Assert.True(Instalacao.ExigeShaDoRelease(github.Mod, github.Remoto));
+            Assert.Contains("sem sha256", Assert.Throws<InvalidOperationException>(() => Instalacao.Instalar(github, Path.GetTempPath(), null, _ => { })).Message);
+
+            // Externa: não há como conferir de antemão — o hash gravado no registro vira a referência.
+            var externa = new EstadoMod
+            {
+                Mod = new ModDoCatalogo { Id = "X", Nome = "X", Community = true, Origem = new Origem { Url = "https://cdn.exemplo.com/X.zip", Arquivo = "X.zip" } },
+                Remoto = new Lancamento { Versao = "externa", Url = "https://cdn.exemplo.com/X.zip" },
+            };
+            Assert.False(Instalacao.ExigeShaDoRelease(externa.Mod, externa.Remoto));
+        }
+
+        [Fact]
+        public void Avaliar_ExternaSemRegistroOfereceODownload()
+        {
+            var mod = new ModDoCatalogo { Id = "Mapa", Nome = "Mapa", Community = true, Origem = new Origem { Url = "https://cdn.exemplo.com/Mapa.zip", Arquivo = "Mapa.zip" } };
+            var e = Instalacao.Avaliar(mod, Path.GetTempPath(), Registro.Abrir(Path.GetTempPath()), false);
+            Assert.Equal(Situacao.NaoInstalado, e.Situacao);
+            Assert.Equal("https://cdn.exemplo.com/Mapa.zip", e.Remoto.Url);
         }
 
         static EstadoMod State(string name, bool community, bool trusted = false, bool installed = false) => new EstadoMod
@@ -210,7 +250,7 @@ namespace PbsuLoader.Testes
                 var c = Catalogo.Carregar(s => log.AppendLine(s));
                 Assert.Equal(baseArq, c.Fonte);
                 Assert.True(c.Mod("Bom").Community);
-                Assert.Contains("1 plugin(s)", log.ToString());
+                Assert.Contains("1 mod(s)", log.ToString());
 
                 Environment.SetEnvironmentVariable("PBSU_CATALOGO_COMUNIDADE", Path.Combine(pasta, "nao-existe.json"));
                 c = Catalogo.Carregar(s => log.AppendLine(s));

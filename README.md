@@ -32,6 +32,17 @@ certa, instala a PBSLoaderCommonUtils e a PBSLoaderCommonInterface e atualiza o 
 à mão continuam lá. O instalador só apaga o que ele mesmo instalou: a lista, com o SHA-256 de cada arquivo, está em
 `UserData/pbsu-loader/instalado.json`. Um arquivo que você trocou à mão aparece como *Diferente do release*.
 
+### Instalar a partir do site
+
+Cada mod da comunidade tem, na página dele no site, um botão **Instalar pelo loader** que abre o link
+`pbsloader://mod/<id>`. O instalador registra o protocolo `pbsloader://` ao abrir (HKCU, sem administração) e,
+quando é chamado por ele, abre com o mod — e as dependências — já marcado: é só conferir e clicar em **Aplicar**.
+
+Os mods da comunidade vêm do catálogo do site (`community-catalog.json` do pbs-loader-catalogo), junto com os mods
+de infraestrutura do [catalogo.json](catalogo.json). Plugin entra como `.dll` pelo GitHub; ônibus, mapa e outros
+tipos entram como `.zip`. Origem externa (link direto) só aceita https: como ela não publica SHA-256, o hash
+calculado na primeira instalação passa a ser a referência, e o instalador avisa se o arquivo mudar fora dele.
+
 ### Avisos do Windows
 
 O `PbsuLoader.exe` não tem assinatura digital, então o SmartScreen pode mostrar "O Windows protegeu o computador". Para

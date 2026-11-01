@@ -16,6 +16,8 @@ namespace PbsuLoader
     class Janela : Form
     {
         readonly string[] _args;
+        readonly string _modDoSite; // id vindo de pbsloader://mod/<id>: pré-selecionado na primeira lista
+        bool _escolhidoDoSite;
         Catalogo _cat;
         string _jogo, _versaoJogo, _versaoMelon;
         Registro _reg;
@@ -48,6 +50,7 @@ namespace PbsuLoader
         public Janela(string[] args)
         {
             _args = args;
+            _modDoSite = args.Select(Protocolo.IdDoArgumento).FirstOrDefault(id => id != null);
             Text = "PBSLoader " + Programa.Versao;
             Font = new Font("Segoe UI", 9f);
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -520,6 +523,7 @@ namespace PbsuLoader
                 _ocupado = false;
                 UseWaitCursor = false;
                 Preencher();
+                EscolherModDoSite();
                 Capturar();
             }));
             });
@@ -537,6 +541,28 @@ namespace PbsuLoader
                 b.Save(arg.Substring("--captura=".Length), System.Drawing.Imaging.ImageFormat.Png);
             }
             Close();
+        }
+
+        // O site pediu pbsloader://mod/<id>: marca o mod (com as dependências dele), mostra na lista e avisa no log.
+        // Tenta a cada verificação até conseguir; depois para, para não remarcar o que o usuário desmarcar à mão.
+        void EscolherModDoSite()
+        {
+            if (_escolhidoDoSite || _modDoSite == null || _lista.Items.Count == 0) return;
+            _escolhidoDoSite = true;
+            var item = _lista.Items.Cast<ListViewItem>().FirstOrDefault(it =>
+                string.Equals(((EstadoMod)it.Tag).Mod.Id, _modDoSite, StringComparison.OrdinalIgnoreCase));
+            if (item == null)
+            {
+                Log("O site pediu o mod \"" + _modDoSite + "\", mas ele não está no catálogo.");
+                return;
+            }
+            _marcando = true;
+            try { item.Checked = true; Normalizar(); }
+            finally { _marcando = false; }
+            item.Selected = true;
+            item.Focused = true;
+            item.EnsureVisible();
+            Log("O site pediu o mod \"" + ((EstadoMod)item.Tag).Mod.Nome + "\": marcado para instalar — clique em \"Aplicar\".");
         }
 
         void Habilitar()

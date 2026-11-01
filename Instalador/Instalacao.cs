@@ -138,6 +138,14 @@ namespace PbsuLoader
                 "Só continue se confia no autor.";
         }
 
+        /// <summary>
+        /// O GitHub publica o SHA-256 de cada asset: mod da comunidade de release sem ele é recusado, porque
+        /// poderia ser qualquer coisa. Origem externa não tem como conferir de antemão: o hash do que baixou é
+        /// gravado no registro (confiança na primeira instalação) e o Avaliar vigia os arquivos depois.
+        /// </summary>
+        internal static bool ExigeShaDoRelease(ModDoCatalogo mod, Lancamento remoto)
+            => mod.Community && !mod.Origem.Externa && remoto != null && remoto.Sha256 == null;
+
         /// <param name="local">Build local do mod (modo desenvolvedor), ou null para usar o release.</param>
         public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre, string local = null)
         {
@@ -147,6 +155,29 @@ namespace PbsuLoader
             {
                 try { e.Remoto = Rede.UltimoLancamento(mod.Origem, aceitarPre); }
                 catch (Exception ex) { e.Detalhe = "não consegui consultar o GitHub: " + ex.Message; }
+            }
+
+            // Origem externa: não há release para consultar. O que dá para conferir é o que o instalador registrou
+            // da última instalação (arquivos presentes e com o mesmo SHA-256); sem registro, oferece o download.
+            if (mod.Origem.Externa)
+            {
+                if (e.Instalado != null)
+                {
+                    var faltando = e.Instalado.Arquivos.Keys.Where(a => !File.Exists(Absoluto(jogo, a))).ToList();
+                    var alterados = e.Instalado.Arquivos.Where(a => File.Exists(Absoluto(jogo, a.Key)) && a.Value != null
+                        && !string.Equals(Rede.Sha256(Absoluto(jogo, a.Key)), a.Value, StringComparison.OrdinalIgnoreCase)).Select(a => a.Key).ToList();
+                    if (faltando.Count > 0) { e.Situacao = Situacao.Diferente; e.Detalhe = "faltam arquivos: " + string.Join(", ", faltando); }
+                    else if (alterados.Count > 0) { e.Situacao = Situacao.Diferente; e.Detalhe = "arquivo trocado fora do instalador: " + string.Join(", ", alterados); }
+                    else
+                    {
+                        e.Situacao = Situacao.Atualizado;
+                        e.Detalhe = "origem externa: o instalador não sabe quando o arquivo muda; desmarque e aplique para baixar de novo";
+                    }
+                    return e;
+                }
+                e.Remoto = new Lancamento { Versao = "externa", Url = mod.Origem.Url };
+                e.Situacao = Situacao.NaoInstalado;
+                return e;
             }
 
             if (local != null && EhDll(mod.Origem))
@@ -217,7 +248,7 @@ namespace PbsuLoader
                 log("  " + e.Mod.Nome + " copiado do build local (" + e.Local + ").");
                 return;
             }
-            if (e.Mod.Community && e.Remoto.Sha256 == null)
+            if (ExigeShaDoRelease(e.Mod, e.Remoto))
                 throw new InvalidOperationException(e.Mod.Nome + " " + e.Remoto.Versao + " está sem sha256 no GitHub; o autor precisa publicar o release de novo.");
             log("Baixando " + e.Mod.Nome + " " + e.Remoto.Versao + "...");
             string tmp = Rede.Baixar(e.Remoto.Url, e.Remoto.Sha256);

@@ -2,6 +2,10 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## Instalador 0.2.2 (2026-11-01)
+
+- Mods obrigatórios instalam junto ao loader mesmo quando o autor só publicou pré-lançamento: a base do sistema não pode ficar de fora por causa do flag de release.
+
 ## Instalador 0.2.1 (2026-10-31)
 
 - Uma instância só: abrir de novo (inclusive pelo link do site) encaminha o pedido para a janela que já está aberta, em vez de abrir outra brigando por consultas do GitHub e pelos arquivos do jogo.

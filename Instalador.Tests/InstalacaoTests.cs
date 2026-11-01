@@ -408,4 +408,28 @@ namespace PbsuLoader.Testes
             Assert.StartsWith("Não consegui gravar", Assert.Single(log));
         }
     }
+
+    public class AceitaPreLancamentoTests
+    {
+        [Fact]
+        public void Obrigatorio_AceitaPreLancamento()
+        {
+            var mod = new ModDoCatalogo { Id = "X", Obrigatorio = true };
+            Assert.True(Instalacao.AceitaPreLancamento(false, mod));
+        }
+
+        [Fact]
+        public void Opcional_SemBeta_NaoAceita()
+        {
+            var mod = new ModDoCatalogo { Id = "Y", Obrigatorio = false };
+            Assert.False(Instalacao.AceitaPreLancamento(false, mod));
+        }
+
+        [Fact]
+        public void Opcional_ComBeta_Aceita()
+        {
+            var mod = new ModDoCatalogo { Id = "Z", Obrigatorio = false };
+            Assert.True(Instalacao.AceitaPreLancamento(true, mod));
+        }
+    }
 }

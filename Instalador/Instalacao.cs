@@ -146,6 +146,10 @@ namespace PbsuLoader
         internal static bool ExigeShaDoRelease(ModDoCatalogo mod, Lancamento remoto)
             => mod.Community && !mod.Origem.Externa && remoto != null && remoto.Sha256 == null;
 
+        /// <summary>Mods obrigatórios são a base do loader: se o autor só publicou pré-lançamento, o instalador usa mesmo assim.</summary>
+        internal static bool AceitaPreLancamento(bool aceitarPre, ModDoCatalogo mod)
+            => aceitarPre || mod.Obrigatorio;
+
         /// <param name="local">Build local do mod (modo desenvolvedor), ou null para usar o release.</param>
         public static EstadoMod Avaliar(ModDoCatalogo mod, string jogo, Registro reg, bool aceitarPre, string local = null)
         {
@@ -153,7 +157,7 @@ namespace PbsuLoader
             reg.Mods.TryGetValue(mod.Id, out e.Instalado);
             if (!string.IsNullOrEmpty(mod.Origem.Repo))
             {
-                try { e.Remoto = Rede.UltimoLancamento(mod.Origem, aceitarPre); }
+                try { e.Remoto = Rede.UltimoLancamento(mod.Origem, AceitaPreLancamento(aceitarPre, mod)); }
                 catch (Exception ex) { e.Detalhe = "não consegui consultar o GitHub: " + ex.Message; }
             }
 

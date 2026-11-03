@@ -91,6 +91,7 @@ namespace PBSLoaderCommonInterface
             _carregando?.Soltar();
             _carregando = null;
             Carregando.Segurar(4f);
+            Orig.CenaMudou();
             _proximaProcura = 0f;
             _procurarRapidoAte = Time.unscaledTime + 30f;
             _procurarCarregandoAte = Time.unscaledTime + 8f;

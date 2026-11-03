@@ -633,8 +633,15 @@ namespace PBSLoaderCommonInterface
 
         protected bool Vivo => ctrl != null && !ctrl.WasCollected;
 
+        // Por tipo de tela (campo estático de classe genérica).
+        static float _proximaBusca;
+
         protected override Transform AcharRaiz()
         {
+            // As telas de seleção só existem nas cenas de menu, que aparecem logo depois de carregar. FindObjectOfType varre
+            // todos os componentes da cena (~4 ms com o mapa carregado): fora dos primeiros 30 s da cena, a cada 10 s.
+            if (Orig.SegundosDesdeCena > 30f && Time.unscaledTime < _proximaBusca) return null;
+            _proximaBusca = Time.unscaledTime + 10f;
             var c = UnityEngine.Object.FindObjectOfType<T>();
             if (c == null) return null;
             var dd = ListaDe(c);

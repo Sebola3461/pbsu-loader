@@ -14,25 +14,71 @@ namespace PBSLoaderCommonInterface
         // Procura em todas as cenas carregadas: no sceneLoaded a cena nova ainda pode não ser a ativa.
         internal static Transform Raiz(string nome, string filho = null)
         {
+            // As telas originais são Canvas na raiz da cena: o índice de Canvas por nome resolve quase sempre.
+            CanvasesPorNome().TryGetValue(nome, out var canvases);
+            if (canvases != null)
+                foreach (var c in canvases)
+                    if (c.t != null && c.topo && (filho == null || c.t.Find(filho) != null)) return c.t;
+            if (Raizes().TryGetValue(nome, out var comNome))
+                foreach (var t in comNome)
+                    if (t != null && (filho == null || t.Find(filho) != null)) return t;
+            // Canvas que não estão no topo da cena (dentro de outro objeto) ou em DontDestroyOnLoad,
+            // que não aparece em SceneManager.
+            if (canvases != null && nome != "PBSLoaderCommonInterface" && nome != "PBSLoaderCommonInterface_Carregando")
+                foreach (var c in canvases)
+                    if (c.t != null && c.raizCanvas && (filho == null || c.t.Find(filho) != null)) return c.t;
+            return null;
+        }
+
+        // Raízes das cenas carregadas por nome: o mapa tem milhares de raízes, e cada
+        // tela que ainda não achou o seu original varria todas elas de novo (25-30 ms a cada segundo na partida).
+        // Fica válida 5 s (a troca de cena invalida): só serve quando a raiz com o nome procurado não é um Canvas.
+        static readonly Dictionary<string, List<Transform>> _raizes = new();
+        static float _raizesAte = -1f;
+
+        static float _cenaEm;
+
+        internal static void CenaMudou() { _raizesAte = -1f; _cenaEm = Time.unscaledTime; }
+
+        internal static float SegundosDesdeCena => Time.unscaledTime - _cenaEm;
+
+        static Dictionary<string, List<Transform>> Raizes()
+        {
+            if (Time.unscaledTime < _raizesAte) return _raizes;
+            _raizesAte = Time.unscaledTime + 5f;
+            foreach (var l in _raizes.Values) l.Clear();
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var cena = SceneManager.GetSceneAt(i);
                 if (!cena.isLoaded) continue;
                 foreach (var go in cena.GetRootGameObjects())
                 {
-                    if (go == null || go.name != nome) continue;
-                    if (filho == null || go.transform.Find(filho) != null) return go.transform;
+                    if (go == null) continue;
+                    if (!_raizes.TryGetValue(go.name, out var l)) _raizes[go.name] = l = new List<Transform>();
+                    l.Add(go.transform);
                 }
             }
-            // Canvas que não estão no topo da cena (dentro de outro objeto) ou em DontDestroyOnLoad,
-            // que não aparece em SceneManager: procura pelos componentes Canvas.
+            return _raizes;
+        }
+
+        // Canvas por nome, montado uma vez por frame: percorrer a lista pela ponte do IL2CPP (um objeto e um nome
+        // convertido por Canvas, e o mapa tem centenas em placas e letreiros) custava ~4 ms a cada tela procurada.
+        static readonly Dictionary<string, List<(Transform t, bool topo, bool raizCanvas)>> _porNome = new();
+        static int _framePorNome = -1;
+
+        static Dictionary<string, List<(Transform t, bool topo, bool raizCanvas)>> CanvasesPorNome()
+        {
+            if (_framePorNome == Time.frameCount) return _porNome;
+            _framePorNome = Time.frameCount;
+            foreach (var l in _porNome.Values) l.Clear();
             foreach (var cv in Canvases())
             {
-                if (cv == null || !cv.isRootCanvas || cv.name != nome) continue;
-                if (cv.name == "PBSLoaderCommonInterface" || cv.name == "PBSLoaderCommonInterface_Carregando") continue;
-                if (filho == null || cv.transform.Find(filho) != null) return cv.transform;
+                if (cv == null) continue;
+                var t = cv.transform;
+                if (!_porNome.TryGetValue(cv.name, out var l)) _porNome[cv.name] = l = new List<(Transform, bool, bool)>();
+                l.Add((t, t.parent == null, cv.isRootCanvas));
             }
-            return null;
+            return _porNome;
         }
 
         // Lista de Canvas da cena, no máximo uma varredura por frame (várias telas procuram ao mesmo tempo).

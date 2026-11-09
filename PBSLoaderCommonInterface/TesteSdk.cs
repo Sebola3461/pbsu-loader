@@ -22,6 +22,9 @@ namespace PBSLoaderCommonInterface
         static Widget _widget;
         static float _valor;
         static bool _chave;
+        static string _texto = "abc", _escolhido = "a";
+        static float _numero = 1.5f;
+        static readonly System.Collections.Generic.List<string> _itens = new() { "a", "b", "c" };
         static Pacote _pacote;
 
         static string Dir => Path.Combine(MelonEnvironment.UserDataDirectory, "PBSLoaderCommonInterface");
@@ -43,6 +46,37 @@ namespace PBSLoaderCommonInterface
         }
 
         static void Proxima() { _etapa++; _frames = 0; }
+
+        static int Linhas()
+        {
+            var j = _painel?.Janela;
+            if (j == null) return -1;
+            int n = 0;
+            foreach (var t in j.GetComponentsInChildren<RectTransform>(false)) if (t.name == "Item") n++;
+            return n;
+        }
+
+        static bool GrupoAtivo()
+        {
+            var j = _painel?.Janela;
+            if (j == null) return false;
+            foreach (var t in j.GetComponentsInChildren<RectTransform>(true)) if (t.name == "Grupo") return t.gameObject.activeSelf;
+            return false;
+        }
+
+        static UnityEngine.UI.InputField Campo(int i)
+        {
+            var c = _painel?.Janela?.GetComponentsInChildren<UnityEngine.UI.InputField>(true);
+            return c != null && i < c.Length ? c[i] : null;
+        }
+
+        static bool ErroVisivel()
+        {
+            var j = _painel?.Janela;
+            if (j == null) return false;
+            foreach (var t in j.GetComponentsInChildren<UnityEngine.UI.Text>(false)) if (t.text == "Digite um número") return true;
+            return false;
+        }
 
         internal static void Quadro()
         {
@@ -72,7 +106,12 @@ namespace PBSLoaderCommonInterface
                             .Secao("Controles")
                             .Chave("Chave de teste", () => _chave, v => _chave = v)
                             .Faixa("Faixa de teste", () => _valor, v => _valor = v, 0f, 10f, 0.5f)
-                            .Botao("Botão de teste", () => _chave = !_chave, "Alternar");
+                            .Botao("Botão de teste", () => _chave = !_chave, "Alternar")
+                            .Secao("Edição")
+                            .Campo("Texto", () => _texto, v => _texto = v)
+                            .CampoNumero("Número", () => _numero, v => _numero = v, "0.##", null, 0f, 100f)
+                            .Lista(() => _itens, x => x, x => _escolhido = x, x => x == _escolhido, x => "detalhe " + x, 180f)
+                            .Se(() => _chave).Valor("Só com a chave", () => "visível").FimSe();
                         _painel.Abrir();
                     }
                     if (_frames == 60)
@@ -80,12 +119,31 @@ namespace PBSLoaderCommonInterface
                         var j = _painel.Janela;
                         int linhas = j != null ? j.GetComponentsInChildren<UnityEngine.UI.LayoutElement>(true).Length : 0;
                         Checar($"painel aberto ({_painel.Itens.Count} itens, janela ativa {j != null && j.activeInHierarchy}, {linhas} elementos)",
-                            j != null && j.activeInHierarchy && _painel.Itens.Count == 8);
+                            j != null && j.activeInHierarchy && _painel.Itens.Count == 13);
                         Checar("painel solta o cursor", PBSLoaderCommonUtils.Entrada.Mouse.Solto);
                         Checar("painel aparece como ação no menu Mods", PainelMods.Mods.TryGetValue("PBSLoaderCommonInterface", out var i) && i.acoes.Any(a => a.rotulo == "Teste do SDK"));
                         Print("painel");
+                        Checar($"lista com 3 linhas ({Linhas()})", Linhas() == 3);
+                        Checar("bloco Se escondido com a condição falsa", !GrupoAtivo());
+                        Checar($"campo mostra o valor (\"{Campo(0)?.text}\")", Campo(0)?.text == "abc");
                     }
-                    if (_frames == 70)
+                    if (_frames == 61)
+                    {
+                        _chave = true;
+                        _itens.Add("d");
+                        _escolhido = "b";
+                        Campo(1).onEndEdit.Invoke("42,5");
+                    }
+                    if (_frames == 62) Campo(1).onEndEdit.Invoke("abc");
+                    if (_frames == 80)
+                    {
+                        Checar($"lista ganhou a linha nova ({Linhas()})", Linhas() == 4);
+                        Checar("bloco Se aparece com a condição verdadeira", GrupoAtivo());
+                        Checar($"número com vírgula aplicado ({_numero})", Mathf.Abs(_numero - 42.5f) < 0.001f);
+                        Checar("número inválido recusado com mensagem", Mathf.Abs(_numero - 42.5f) < 0.001f && ErroVisivel());
+                        Print("painel_edicao");
+                    }
+                    if (_frames == 90)
                     {
                         _painel.Fechar();
                         Proxima();

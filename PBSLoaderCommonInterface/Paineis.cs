@@ -28,7 +28,14 @@ namespace PBSLoaderCommonInterface
         public void Fechar() { if (Aberto) { Aberto = false; Paineis.Esconder(this); } }
         public void Alternar() { if (Aberto) Fechar(); else Abrir(); }
 
-        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa }
+        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa, Campo, Lista }
+
+        internal readonly struct LinhaDaLista
+        {
+            public readonly string Nome, Detalhe;
+            public readonly bool Selecionada;
+            public LinhaDaLista(string nome, string detalhe, bool selecionada) { Nome = nome; Detalhe = detalhe; Selecionada = selecionada; }
+        }
 
         internal sealed class Item
         {
@@ -42,6 +49,15 @@ namespace PBSLoaderCommonInterface
             public Action<float> MudarNumero;
             public float Min, Max, Passo;
             public string Formato;
+            public Func<bool> Visivel;
+            public Action<string> MudarTexto;
+            public Func<string, string> Validar;
+            // Campo numérico compara pelo valor (no seu mudar), não pelo texto: "1,5" e "1.50" são o mesmo número.
+            public bool CompararPeloValor;
+            public Func<IReadOnlyList<LinhaDaLista>> Linhas;
+            public Action<int> Escolher;
+            public float Altura;
+            public string Vazio;
         }
 
         internal readonly List<Item> Itens = new();
@@ -49,7 +65,9 @@ namespace PBSLoaderCommonInterface
 
         internal Painel(string mod, string id, string titulo) { Mod = mod; Id = id; Titulo = titulo; }
 
-        Painel Add(Item i) { Itens.Add(i); Paineis.Refazer(this); return this; }
+        Func<bool> _condicao;
+
+        Painel Add(Item i) { i.Visivel = _condicao; Itens.Add(i); Paineis.Refazer(this); return this; }
 
         /// <summary>Título de grupo.</summary>
         public Painel Secao(string titulo) => Add(new Item { Tipo = Tipo.Secao, Rotulo = titulo });
@@ -68,6 +86,75 @@ namespace PBSLoaderCommonInterface
         /// <summary>Faixa arrastável de <paramref name="min"/> a <paramref name="max"/> (passo 0 = contínua).</summary>
         public Painel Faixa(string rotulo, Func<float> ler, Action<float> mudar, float min, float max, float passo = 0f, string formato = "0.##") =>
             Add(new Item { Tipo = Tipo.Faixa, Rotulo = rotulo, Numero = ler, MudarNumero = mudar, Min = min, Max = max, Passo = passo, Formato = formato });
+
+        /// <summary>
+        /// Campo de texto de uma linha. Mostra <paramref name="ler"/> enquanto não está em edição e chama
+        /// <paramref name="mudar"/> ao confirmar (Enter ou clique fora), só se o texto mudou. Com <paramref name="validar"/>,
+        /// um texto que devolve mensagem não é aplicado: a mensagem aparece embaixo do rótulo até a próxima edição válida.
+        /// Enquanto o campo tem foco, os atalhos e o teclado do jogo ficam parados.
+        /// </summary>
+        public Painel Campo(string rotulo, Func<string> ler, Action<string> mudar, string descricao = null, Func<string, string> validar = null) =>
+            Add(new Item { Tipo = Tipo.Campo, Rotulo = rotulo, Texto = ler, MudarTexto = mudar, Descricao = descricao, Validar = validar });
+
+        /// <summary>
+        /// Campo numérico: aceita ponto ou vírgula decimal e, se dados, recusa valores fora de
+        /// [<paramref name="min"/>, <paramref name="max"/>] com uma mensagem no próprio campo.
+        /// </summary>
+        public Painel CampoNumero(string rotulo, Func<float> ler, Action<float> mudar, string formato = "0.###", string descricao = null,
+            float min = float.NegativeInfinity, float max = float.PositiveInfinity)
+        {
+            string Erro(string s)
+            {
+                if (!LerNumero(s, out var v)) return "Digite um número";
+                if (v < min || v > max) return $"Entre {Num(min, formato)} e {Num(max, formato)}";
+                return null;
+            }
+            Campo(rotulo, () => Num(ler(), formato), s => { if (LerNumero(s, out var v) && v != ler()) mudar(v); }, descricao, Erro);
+            Itens[^1].CompararPeloValor = true;
+            return this;
+        }
+
+        static string Num(float v, string formato) => v.ToString(formato, CultureInfo.InvariantCulture);
+
+        static bool LerNumero(string s, out float v) =>
+            float.TryParse((s ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out v)
+            && !float.IsNaN(v) && !float.IsInfinity(v);
+
+        /// <summary>
+        /// Lista rolável de altura fixa, relida a cada 0,1 s: linhas entram e saem sem remontar o painel. Um clique chama
+        /// <paramref name="escolher"/> com o item da linha; <paramref name="selecionado"/> marca as linhas em destaque e
+        /// <paramref name="detalhe"/> dá a segunda linha de texto. Sem itens, mostra <paramref name="vazio"/>.
+        /// </summary>
+        public Painel Lista<T>(Func<IReadOnlyList<T>> itens, Func<T, string> nome, Action<T> escolher, Func<T, bool> selecionado = null,
+            Func<T, string> detalhe = null, float altura = 260f, string vazio = "Nada para mostrar")
+        {
+            IReadOnlyList<T> ultimo = Array.Empty<T>();
+            IReadOnlyList<LinhaDaLista> Linhas()
+            {
+                ultimo = itens() ?? Array.Empty<T>();
+                var r = new LinhaDaLista[ultimo.Count];
+                for (int i = 0; i < r.Length; i++)
+                {
+                    var x = ultimo[i];
+                    r[i] = new LinhaDaLista(nome(x) ?? "", detalhe?.Invoke(x) ?? "", selecionado != null && selecionado(x));
+                }
+                return r;
+            }
+            return Add(new Item
+            {
+                Tipo = Tipo.Lista, Linhas = Linhas, Altura = altura, Vazio = vazio,
+                Escolher = i => { if (i >= 0 && i < ultimo.Count) escolher(ultimo[i]); },
+            });
+        }
+
+        /// <summary>
+        /// Os itens adicionados daqui até <see cref="FimSe"/> só aparecem enquanto <paramref name="condicao"/> for verdadeira
+        /// (inspetor da seleção atual, opções avançadas). Blocos não se aninham: um novo Se substitui o anterior.
+        /// </summary>
+        public Painel Se(Func<bool> condicao) { _condicao = condicao; return this; }
+
+        /// <summary>Fecha o bloco aberto por <see cref="Se"/>.</summary>
+        public Painel FimSe() { _condicao = null; return this; }
 
         /// <summary>
         /// Uma preferência do mod, com o controle do tipo dela: bool vira chave; número vira faixa (com
@@ -187,6 +274,7 @@ namespace PBSLoaderCommonInterface
             Kit.Tam(cab, -1, 40);
             var tit = Kit.Texto(cab, (p.Titulo ?? p.Id).ToUpperInvariant(), 18, Theme.Texto, true);
             Kit.Tam(tit, -1, 40, 1);
+            Kit.AoQuadro(tit.gameObject, () => { var t = (p.Titulo ?? p.Id).ToUpperInvariant(); if (tit.text != t) tit.text = t; });
             if (p.Atalho != null)
             {
                 var dica = Kit.Texto(cab, "", 12, Theme.TextoMudo, false, TextAnchor.MiddleRight);
@@ -196,7 +284,24 @@ namespace PBSLoaderCommonInterface
             Kit.NovoBotao(cab, null, Ico.Fechar, Estilo.Icone, p.Fechar, 36);
             Kit.Divisoria(j);
 
-            foreach (var it in p.Itens) Item(j, p, it);
+            // Itens seguidos com a mesma condição dividem um grupo, que a janela liga e desliga a cada quadro.
+            RectTransform grupo = null;
+            Func<bool> condicaoDoGrupo = null;
+            foreach (var it in p.Itens)
+            {
+                if (it.Visivel == null) { grupo = null; condicaoDoGrupo = null; Item(j, p, it); continue; }
+                if (grupo == null || it.Visivel != condicaoDoGrupo)
+                {
+                    grupo = Kit.Novo("Grupo", j);
+                    Kit.Coluna(grupo, 0);
+                    condicaoDoGrupo = it.Visivel;
+                    var g = grupo.gameObject;
+                    var c = it.Visivel;
+                    g.SetActive(LerCondicao(p, c));
+                    Kit.AoQuadro(j.gameObject, () => { bool v = LerCondicao(p, c); if (g.activeSelf != v) g.SetActive(v); });
+                }
+                Item(grupo, p, it);
+            }
             return j;
         }
 
@@ -213,6 +318,12 @@ namespace PBSLoaderCommonInterface
             catch (Exception e) { PBSLoaderCommonUtils.Sdk.Registrar(e, $"Painel {p.Mod}.{p.Id}"); return 0f; }
         }
 
+        static bool LerCondicao(Painel p, Func<bool> f)
+        {
+            try { return f(); }
+            catch (Exception e) { PBSLoaderCommonUtils.Sdk.Registrar(e, $"Painel {p.Mod}.{p.Id}"); return false; }
+        }
+
         static void Rodar(Painel p, Action a)
         {
             try { a(); }
@@ -220,12 +331,16 @@ namespace PBSLoaderCommonInterface
         }
 
         // Linha: rótulo (e descrição) à esquerda, controle à direita. Devolve o slot do controle.
-        static RectTransform Linha(Transform pai, string rotulo, string descricao, float larguraControle)
+        static RectTransform Linha(Transform pai, string rotulo, string descricao, float larguraControle) =>
+            Linha(pai, rotulo, descricao, larguraControle, out _);
+
+        static RectTransform Linha(Transform pai, string rotulo, string descricao, float larguraControle, out RectTransform rotulos)
         {
             var l = Kit.Novo("Linha", pai);
             var hl = Kit.Linha(l, 12);
             Kit.Pad(hl, 0, 0, 7, 7);
             var esq = Kit.Novo("Rotulos", l);
+            rotulos = esq;
             Kit.Coluna(esq, 2, 0, TextAnchor.MiddleLeft);
             Kit.Tam(esq, -1, -1, 1);
             var t = Kit.Texto(esq, rotulo ?? "", 14, Theme.Texto);
@@ -309,6 +424,12 @@ namespace PBSLoaderCommonInterface
                         Kit.AoQuadro(c.go, () => { try { c.Definir(it.Ligado()); } catch { } });
                         break;
                     }
+                case Painel.Tipo.Campo:
+                    MontarCampo(j, p, it);
+                    break;
+                case Painel.Tipo.Lista:
+                    MontarLista(j, p, it);
+                    break;
                 case Painel.Tipo.Faixa:
                     {
                         var ctrl = Linha(j, it.Rotulo, null, 230);
@@ -332,6 +453,90 @@ namespace PBSLoaderCommonInterface
                         });
                         break;
                     }
+            }
+        }
+
+        static void MontarCampo(Transform j, Painel p, Painel.Item it)
+        {
+            var ctrl = Linha(j, it.Rotulo, it.Descricao, 200, out var rotulos);
+            var erro = Kit.Texto(rotulos, "", 11, Theme.PerigoTexto);
+            erro.verticalOverflow = VerticalWrapMode.Overflow;
+            erro.gameObject.SetActive(false);
+            var campo = Kit.Campo(ctrl, "", null, null, null);
+            Kit.Tam(campo, 200, 34);
+            campo.onEndEdit.AddListener((UnityEngine.Events.UnityAction<string>)(texto =>
+            {
+                string msg = null;
+                if (it.Validar != null) { try { msg = it.Validar(texto); } catch (Exception e) { msg = e.Message; } }
+                erro.text = msg ?? "";
+                erro.gameObject.SetActive(msg != null);
+                if (msg == null && (it.CompararPeloValor || texto != Ler(p, it.Texto))) Rodar(p, () => it.MudarTexto(texto));
+            }));
+            // Com erro na tela, o texto recusado fica no campo para o usuário corrigir.
+            Kit.AoQuadro(campo.gameObject, () =>
+            {
+                if (campo.isFocused || erro.gameObject.activeSelf) return;
+                var s = Ler(p, it.Texto);
+                if (campo.text != s) campo.text = s;
+            });
+        }
+
+        // Linhas reaproveitadas: só se criam ou destroem linhas quando a contagem muda; textos e destaque mudam no lugar.
+        static void MontarLista(Transform j, Painel p, Painel.Item it)
+        {
+            var caixa = Kit.Novo("CaixaDaLista", j);
+            Kit.Tam(caixa, -1, it.Altura);
+            Kit.Coluna(caixa, 0);
+            var conteudo = Kit.Lista(caixa, out _);
+            var vazio = Kit.Texto(caixa, it.Vazio ?? "", 13, Theme.TextoMudo, false, TextAnchor.MiddleCenter);
+            vazio.font = Theme.TextoCorrido;
+            vazio.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            Kit.Encher(vazio.rectTransform);
+
+            var linhas = new List<Kit.ItemLista>();
+            var ultimas = new List<Painel.LinhaDaLista>();
+            float proxima = 0f;
+            Kit.AoQuadro(caixa.gameObject, () =>
+            {
+                if (Time.unscaledTime < proxima) return;
+                proxima = Time.unscaledTime + 0.1f;
+                IReadOnlyList<Painel.LinhaDaLista> atual;
+                try { atual = it.Linhas(); }
+                catch (Exception e) { PBSLoaderCommonUtils.Sdk.Registrar(e, $"Painel {p.Mod}.{p.Id}"); return; }
+                if (atual.Count != linhas.Count) RefazerLinhas(conteudo, p, it, atual, linhas, ultimas);
+                else AtualizarLinhas(atual, linhas, ultimas);
+                bool semItens = atual.Count == 0;
+                if (vazio.gameObject.activeSelf != semItens) vazio.gameObject.SetActive(semItens);
+            });
+        }
+
+        static void RefazerLinhas(Transform conteudo, Painel p, Painel.Item it, IReadOnlyList<Painel.LinhaDaLista> atual,
+            List<Kit.ItemLista> linhas, List<Painel.LinhaDaLista> ultimas)
+        {
+            foreach (var l in linhas) UnityEngine.Object.Destroy(l.b.go);
+            linhas.Clear();
+            ultimas.Clear();
+            for (int i = 0; i < atual.Count; i++)
+            {
+                int indice = i;
+                var l = Kit.NovoItemLista(conteudo, i + 1, atual[i].Nome, atual[i].Detalhe, () => Rodar(p, () => it.Escolher(indice)));
+                l.Selecionado(atual[i].Selecionada);
+                linhas.Add(l);
+                ultimas.Add(atual[i]);
+            }
+        }
+
+        static void AtualizarLinhas(IReadOnlyList<Painel.LinhaDaLista> atual, List<Kit.ItemLista> linhas, List<Painel.LinhaDaLista> ultimas)
+        {
+            for (int i = 0; i < atual.Count; i++)
+            {
+                var a = atual[i];
+                var u = ultimas[i];
+                if (a.Nome == u.Nome && a.Detalhe == u.Detalhe && a.Selecionada == u.Selecionada) continue;
+                linhas[i].nome.text = a.Nome;
+                linhas[i].meta.text = a.Detalhe;
+                linhas[i].Selecionado(a.Selecionada);
+                ultimas[i] = a;
             }
         }
 

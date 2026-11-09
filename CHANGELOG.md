@@ -2,6 +2,13 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## PBSLoaderCommonInterface 0.5.0 (2026-11-09)
+
+- Painéis de mod ganham `Campo` e `CampoNumero`. O valor só é aplicado ao confirmar com Enter ou ao clicar fora, e só quando mudou. Um número inválido ou fora da faixa não é aplicado: a mensagem aparece junto do campo.
+- `Lista<T>`: lista rolável relida a cada 0,1 s, com destaque da linha selecionada, segunda linha de detalhe e um aviso quando está vazia. As linhas entram e saem sem remontar o painel.
+- `Se(condição)` e `FimSe()` mostram um bloco de itens só enquanto a condição for verdadeira, para montar inspetores que acompanham a seleção.
+- Mudar o título do painel com ele aberto já aparece na janela.
+
 ## Instalador 0.2.2 (2026-11-01)
 
 - Mods obrigatórios instalam junto ao loader mesmo quando o autor só publicou pré-lançamento: a base do sistema não pode ficar de fora por causa do flag de release.

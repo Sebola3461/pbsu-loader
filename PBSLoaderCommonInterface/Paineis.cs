@@ -30,7 +30,7 @@ namespace PBSLoaderCommonInterface
         public void Fechar() { if (Aberto) { Aberto = false; Paineis.Esconder(this); } }
         public void Alternar() { if (Aberto) Fechar(); else Abrir(); }
 
-        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa, Campo, Lista }
+        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa, Campo, Lista, Botoes, Busca }
 
         internal readonly struct LinhaDaLista
         {
@@ -60,6 +60,8 @@ namespace PBSLoaderCommonInterface
             public Action<int> Escolher;
             public float Altura;
             public string Vazio;
+            public bool Compacta;
+            public (string rotulo, Action acao)[] Botoes;
         }
 
         internal readonly List<Item> Itens = new();
@@ -128,7 +130,7 @@ namespace PBSLoaderCommonInterface
         /// <paramref name="detalhe"/> dá a segunda linha de texto. Sem itens, mostra <paramref name="vazio"/>.
         /// </summary>
         public Painel Lista<T>(Func<IReadOnlyList<T>> itens, Func<T, string> nome, Action<T> escolher, Func<T, bool> selecionado = null,
-            Func<T, string> detalhe = null, float altura = 260f, string vazio = "Nada para mostrar")
+            Func<T, string> detalhe = null, float altura = 260f, string vazio = "Nada para mostrar", bool compacta = false)
         {
             IReadOnlyList<T> ultimo = Array.Empty<T>();
             IReadOnlyList<LinhaDaLista> Linhas()
@@ -144,10 +146,22 @@ namespace PBSLoaderCommonInterface
             }
             return Add(new Item
             {
-                Tipo = Tipo.Lista, Linhas = Linhas, Altura = altura, Vazio = vazio,
+                Tipo = Tipo.Lista, Linhas = Linhas, Altura = altura, Vazio = vazio, Compacta = compacta,
                 Escolher = i => { if (i >= 0 && i < ultimo.Count) escolher(ultimo[i]); },
             });
         }
+
+        /// <summary>
+        /// Fileira de botões de mesma largura numa linha só, sem rótulo à esquerda: barra de ações de uma ferramenta
+        /// ("Salvar", "Desfazer", "Refazer"). Rótulos curtos; o atalho pode ir no próprio texto ("Ponto (P)").
+        /// </summary>
+        public Painel Botoes(params (string rotulo, Action acao)[] botoes) => Add(new Item { Tipo = Tipo.Botoes, Botoes = botoes });
+
+        /// <summary>
+        /// Campo de busca que chama <paramref name="mudar"/> a cada letra (não espera Enter), para filtrar uma
+        /// <see cref="Lista{T}"/> enquanto se digita.
+        /// </summary>
+        public Painel Busca(string dica, Action<string> mudar) => Add(new Item { Tipo = Tipo.Busca, Rotulo = dica, MudarTexto = mudar });
 
         /// <summary>
         /// Os itens adicionados daqui até <see cref="FimSe"/> só aparecem enquanto <paramref name="condicao"/> for verdadeira
@@ -438,6 +452,26 @@ namespace PBSLoaderCommonInterface
                 case Painel.Tipo.Lista:
                     MontarLista(j, p, it);
                     break;
+                case Painel.Tipo.Botoes:
+                    {
+                        var fileira = Kit.Novo("Botoes", j);
+                        var hl = Kit.Linha(fileira, 6);
+                        Kit.Pad(hl, 0, 0, 5, 5);
+                        foreach (var (rotulo, acao) in it.Botoes ?? Array.Empty<(string, Action)>())
+                        {
+                            var a = acao;
+                            var b = Kit.NovoBotao(fileira, rotulo, null, Estilo.Secundario, () => Rodar(p, a), 34, 12, TextAnchor.MiddleCenter);
+                            b.le.flexibleWidth = 1;
+                        }
+                        break;
+                    }
+                case Painel.Tipo.Busca:
+                    {
+                        var campo = Kit.Campo(j, it.Rotulo ?? "Buscar", s => Rodar(p, () => it.MudarTexto(s)), null);
+                        Kit.Tam(campo, -1, 34);
+                        Kit.Espaco(j, 4);
+                        break;
+                    }
                 case Painel.Tipo.Faixa:
                     {
                         var ctrl = Linha(j, it.Rotulo, null, 230);
@@ -528,6 +562,13 @@ namespace PBSLoaderCommonInterface
             {
                 int indice = i;
                 var l = Kit.NovoItemLista(conteudo, i + 1, atual[i].Nome, atual[i].Detalhe, () => Rodar(p, () => it.Escolher(indice)));
+                if (it.Compacta)
+                {
+                    // Lista longa (centenas de itens): linha de 40 px, número menor.
+                    l.b.le.preferredHeight = l.b.le.minHeight = 40f;
+                    l.indice.fontSize = 15;
+                    Kit.Tam(l.indice, 26, 28);
+                }
                 l.Selecionado(atual[i].Selecionada);
                 linhas.Add(l);
                 ultimas.Add(atual[i]);

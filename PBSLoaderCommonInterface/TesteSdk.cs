@@ -24,6 +24,8 @@ namespace PBSLoaderCommonInterface
         static bool _chave;
         static string _texto = "abc", _escolhido = "a";
         static float _numero = 1.5f;
+        static string _busca;
+        static int _botoes;
         static readonly System.Collections.Generic.List<string> _itens = new() { "a", "b", "c" };
         static Pacote _pacote;
 
@@ -111,7 +113,9 @@ namespace PBSLoaderCommonInterface
                             .Campo("Texto", () => _texto, v => _texto = v)
                             .CampoNumero("Número", () => _numero, v => _numero = v, "0.##", null, 0f, 100f)
                             .Lista(() => _itens, x => x, x => _escolhido = x, x => x == _escolhido, x => "detalhe " + x, 180f)
-                            .Se(() => _chave).Valor("Só com a chave", () => "visível").FimSe();
+                            .Se(() => _chave).Valor("Só com a chave", () => "visível").FimSe()
+                            .Busca("Buscar item", s => _busca = s)
+                            .Botoes(("Um", () => _botoes++), ("Dois", () => _botoes += 10));
                         _painel.Abrir();
                     }
                     if (_frames == 60)
@@ -119,7 +123,7 @@ namespace PBSLoaderCommonInterface
                         var j = _painel.Janela;
                         int linhas = j != null ? j.GetComponentsInChildren<UnityEngine.UI.LayoutElement>(true).Length : 0;
                         Checar($"painel aberto ({_painel.Itens.Count} itens, janela ativa {j != null && j.activeInHierarchy}, {linhas} elementos)",
-                            j != null && j.activeInHierarchy && _painel.Itens.Count == 13);
+                            j != null && j.activeInHierarchy && _painel.Itens.Count == 15);
                         Checar("painel solta o cursor", PBSLoaderCommonUtils.Entrada.Mouse.Solto);
                         Checar("painel aparece como ação no menu Mods", PainelMods.Mods.TryGetValue("PBSLoaderCommonInterface", out var i) && i.acoes.Any(a => a.rotulo == "Teste do SDK"));
                         Print("painel");
@@ -133,6 +137,10 @@ namespace PBSLoaderCommonInterface
                         _itens.Add("d");
                         _escolhido = "b";
                         Campo(1).onEndEdit.Invoke("42,5");
+                        var busca = Campo(2);
+                        if (busca != null) busca.text = "ab";
+                        var fileira = _painel.Janela.transform.Find("Botoes");
+                        if (fileira != null) foreach (var b in fileira.GetComponentsInChildren<UnityEngine.UI.Button>()) b.onClick.Invoke();
                     }
                     if (_frames == 62) Campo(1).onEndEdit.Invoke("abc");
                     if (_frames == 80)
@@ -141,6 +149,8 @@ namespace PBSLoaderCommonInterface
                         Checar("bloco Se aparece com a condição verdadeira", GrupoAtivo());
                         Checar($"número com vírgula aplicado ({_numero})", Mathf.Abs(_numero - 42.5f) < 0.001f);
                         Checar("número inválido recusado com mensagem", Mathf.Abs(_numero - 42.5f) < 0.001f && ErroVisivel());
+                        Checar($"busca avisa a cada letra (\"{_busca}\")", _busca == "ab");
+                        Checar($"fileira com dois botões que chamam a ação ({_botoes})", _botoes == 11);
                         Print("painel_edicao");
                     }
                     if (_frames == 90)

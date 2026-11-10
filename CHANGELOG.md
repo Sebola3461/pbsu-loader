@@ -2,6 +2,12 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## PBSLoaderCommonInterface 0.6.0 (2026-11-09)
+
+- `Painel.Botoes(("Salvar", salvar), ("Desfazer", desfazer))`: uma fileira de botões de mesma largura numa linha só, para a barra de ações de uma ferramenta.
+- `Painel.Busca(dica, mudar)`: campo que avisa a cada letra, para filtrar uma lista enquanto se digita.
+- `Lista(..., compacta: true)`: linhas de 40 px para listas longas.
+
 ## PBSLoaderCommonInterface 0.5.1 (2026-11-09)
 
 - `Painel.Direita`: o painel abre no canto superior direito, abaixo dos cartões de HUD. Dá para usar uma janela de ferramenta e um inspetor lado a lado.

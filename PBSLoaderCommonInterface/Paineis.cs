@@ -20,6 +20,8 @@ namespace PBSLoaderCommonInterface
         public string Titulo { get; set; }
         /// <summary>Largura da janela, em pixels de uma tela 1920x1080.</summary>
         public float Largura { get; set; } = 440f;
+        /// <summary>Abre no canto superior direito (abaixo dos cartões de HUD) em vez do esquerdo. Vale na próxima abertura.</summary>
+        public bool Direita { get; set; }
         /// <summary>Atalho que abre e fecha o painel (registrado em <see cref="Paineis.Criar"/>), ou null.</summary>
         public PBSLoaderCommonUtils.Entrada.Atalho Atalho { get; internal set; }
 
@@ -254,11 +256,17 @@ namespace PBSLoaderCommonInterface
         static RectTransform Montar(Painel p)
         {
             int abertos = 0;
-            foreach (var o in _todos) if (o != p && o.Aberto && o.Janela != null) abertos++;
+            foreach (var o in _todos) if (o != p && o.Aberto && o.Janela != null && o.Direita == p.Direita) abertos++;
             var j = Kit.Novo("Painel_" + p.Mod + "_" + p.Id, _canvas.transform);
             j.anchorMin = j.anchorMax = new Vector2(0, 1); j.pivot = new Vector2(0, 1);
             // Abaixo do botão do menu lateral (TelaAlt, 44 px no canto).
             j.anchoredPosition = new Vector2(24 + 28 * abertos, -84 - 28 * abertos);
+            if (p.Direita)
+            {
+                // À direita, abaixo da coluna de cartões de HUD do canto (até ~100 px).
+                j.anchorMin = j.anchorMax = new Vector2(1, 1); j.pivot = new Vector2(1, 1);
+                j.anchoredPosition = new Vector2(-24 - 28 * abertos, -110 - 28 * abertos);
+            }
             Kit.Tam(j, p.Largura);
             j.sizeDelta = new Vector2(p.Largura, 0);
             Kit.Fundo(j, Theme.Solido, Theme.Elevado);

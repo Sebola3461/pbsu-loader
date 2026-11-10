@@ -2,6 +2,10 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## PBSLoaderCommonInterface 0.5.1 (2026-11-09)
+
+- `Painel.Direita`: o painel abre no canto superior direito, abaixo dos cartões de HUD. Dá para usar uma janela de ferramenta e um inspetor lado a lado.
+
 ## PBSLoaderCommonInterface 0.5.0 (2026-11-09)
 
 - Painéis de mod ganham `Campo` e `CampoNumero`. O valor só é aplicado ao confirmar com Enter ou ao clicar fora, e só quando mudou. Um número inválido ou fora da faixa não é aplicado: a mensagem aparece junto do campo.

@@ -5,7 +5,7 @@ using PBSLoaderCommonUtils;
 using UnityEngine;
 using UnityEngine.UI;
 
-[assembly: MelonInfo(typeof(PBSLoaderCommonInterface.PBSLoaderCommonInterfaceMod), "PBSLoaderCommonInterface", "0.5.0", "nzrn")]
+[assembly: MelonInfo(typeof(PBSLoaderCommonInterface.PBSLoaderCommonInterfaceMod), "PBSLoaderCommonInterface", "0.5.1", "nzrn")]
 [assembly: MelonGame(null, "Proton Bus Simulator")]
 
 namespace PBSLoaderCommonInterface

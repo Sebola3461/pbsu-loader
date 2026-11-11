@@ -30,7 +30,7 @@ namespace PBSLoaderCommonInterface
         public void Fechar() { if (Aberto) { Aberto = false; Paineis.Esconder(this); } }
         public void Alternar() { if (Aberto) Fechar(); else Abrir(); }
 
-        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa, Campo, Lista, Botoes, Busca }
+        internal enum Tipo { Secao, Texto, Valor, Barra, Botao, Chave, Faixa, Campo, Lista, Botoes, Busca, Abas, Recolhivel }
 
         internal readonly struct LinhaDaLista
         {
@@ -62,6 +62,8 @@ namespace PBSLoaderCommonInterface
             public string Vazio;
             public bool Compacta;
             public (string rotulo, Action acao)[] Botoes;
+            public Func<string>[] Rotulos;
+            public Func<int> Ativa;
         }
 
         internal readonly List<Item> Itens = new();
@@ -156,6 +158,23 @@ namespace PBSLoaderCommonInterface
         /// ("Salvar", "Desfazer", "Refazer"). Rótulos curtos; o atalho pode ir no próprio texto ("Ponto (P)").
         /// </summary>
         public Painel Botoes(params (string rotulo, Action acao)[] botoes) => Add(new Item { Tipo = Tipo.Botoes, Botoes = botoes });
+
+        /// <summary>
+        /// Abas numa fileira, com a ativa destacada: troca de modo ou de ferramenta dentro de um painel. Os rótulos
+        /// são lidos a cada quadro, então podem levar contadores ou uma marca de não salvo ("Tráfego 18 •").
+        /// <paramref name="escolher"/> recebe o índice da aba clicada; quem muda o que <paramref name="ativa"/>
+        /// devolve é o mod.
+        /// </summary>
+        public Painel Abas(Func<int> ativa, Action<int> escolher, params Func<string>[] rotulos) =>
+            Add(new Item { Tipo = Tipo.Abas, Ativa = ativa, Escolher = escolher, Rotulos = rotulos });
+
+        /// <summary>
+        /// Título de seção que abre e fecha com um clique (seta à esquerda). Ele não esconde nada sozinho: os itens
+        /// da seção vão num <see cref="Se"/> com a mesma condição de <paramref name="aberta"/> (e, se a seção só
+        /// existe em certo caso, com esse caso também, porque blocos Se não se aninham).
+        /// </summary>
+        public Painel SecaoRecolhivel(string titulo, Func<bool> aberta, Action<bool> mudar) =>
+            Add(new Item { Tipo = Tipo.Recolhivel, Rotulo = titulo, Ligado = aberta, Mudar = mudar });
 
         /// <summary>
         /// Campo de busca que chama <paramref name="mudar"/> a cada letra (não espera Enter), para filtrar uma
@@ -357,6 +376,13 @@ namespace PBSLoaderCommonInterface
             catch (Exception e) { PBSLoaderCommonUtils.Sdk.Registrar(e, $"Painel {p.Mod}.{p.Id}"); return "—"; }
         }
 
+        static int LerIndice(Painel p, Func<int> f)
+        {
+            if (f == null) return -1;
+            try { return f(); }
+            catch (Exception e) { PBSLoaderCommonUtils.Sdk.Registrar(e, $"Painel {p.Mod}.{p.Id}"); return -1; }
+        }
+
         static float LerNumero(Painel p, Func<float> f)
         {
             try { return f(); }
@@ -486,6 +512,39 @@ namespace PBSLoaderCommonInterface
                             var b = Kit.NovoBotao(fileira, rotulo, null, Estilo.Secundario, () => Rodar(p, a), 34, 12, TextAnchor.MiddleCenter);
                             b.le.flexibleWidth = 1;
                         }
+                        break;
+                    }
+                case Painel.Tipo.Abas:
+                    {
+                        var fileira = Kit.Novo("Abas", j);
+                        var hl = Kit.Linha(fileira, 4);
+                        Kit.Pad(hl, 0, 0, 4, 6);
+                        var rotulos = it.Rotulos ?? Array.Empty<Func<string>>();
+                        var botoes = new List<Kit.Botao>(rotulos.Length);
+                        for (int i = 0; i < rotulos.Length; i++)
+                        {
+                            int k = i;
+                            var b = Kit.NovoBotao(fileira, Ler(p, rotulos[k]), null, Estilo.Secundario, () => Rodar(p, () => it.Escolher?.Invoke(k)), 34, 12, TextAnchor.MiddleCenter);
+                            b.le.flexibleWidth = 1;
+                            botoes.Add(b);
+                        }
+                        Kit.AoQuadro(fileira.gameObject, () =>
+                        {
+                            int ativa = LerIndice(p, it.Ativa);
+                            for (int k = 0; k < botoes.Count; k++) { botoes[k].Selecionado(k == ativa); botoes[k].Rotulo(Ler(p, rotulos[k])); }
+                        });
+                        break;
+                    }
+                case Painel.Tipo.Recolhivel:
+                    {
+                        Kit.Espaco(j, 4);
+                        var b = Kit.NovoBotao(j, it.Rotulo, Ico.SetaDir, Estilo.Fantasma, () => Rodar(p, () => it.Mudar(!LerCondicao(p, it.Ligado))), 32, 13);
+                        b.le.flexibleWidth = 1;
+                        Kit.AoQuadro(b.go, () =>
+                        {
+                            string ic = LerCondicao(p, it.Ligado) ? Ico.Abaixo : Ico.SetaDir;
+                            if (b.icone != null && b.icone.text != ic) b.icone.text = ic;
+                        });
                         break;
                     }
                 case Painel.Tipo.Busca:

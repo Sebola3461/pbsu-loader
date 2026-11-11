@@ -2,6 +2,15 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## PBSLoaderCommonInterface 0.7.0 (2026-11-10)
+
+- `Painel.Abas(ativa, escolher, rotulos...)`: abas numa fileira, com a ativa destacada. Os rótulos são lidos a cada quadro e podem levar contadores ("Tráfego 18 •").
+- `Painel.SecaoRecolhivel(titulo, aberta, mudar)`: título de seção que abre e fecha com um clique. Os itens dela vão num `Se` com a mesma condição.
+
+## PBSLoaderCommonInterface 0.6.1 (2026-11-10)
+
+- O corpo do painel rola quando o conteúdo passa do pé da tela. O cabeçalho fica fixo.
+
 ## PBSLoaderCommonInterface 0.6.0 (2026-11-09)
 
 - `Painel.Botoes(("Salvar", salvar), ("Desfazer", desfazer))`: uma fileira de botões de mesma largura numa linha só, para a barra de ações de uma ferramenta.

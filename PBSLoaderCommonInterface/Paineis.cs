@@ -354,11 +354,11 @@ namespace PBSLoaderCommonInterface
         static RectTransform Corpo(RectTransform janela)
         {
             var conteudo = Kit.Lista(janela, out var scroll, 0);
-            var area = (RectTransform)scroll.transform;
+            var area = scroll.GetComponent<RectTransform>();
             var tam = Kit.Tam(area, -1, 0, 1, -1);
             Kit.AoQuadro(janela.gameObject, () =>
             {
-                var tela = (RectTransform)_canvas.transform;
+                var tela = _canvas.GetComponent<RectTransform>();
                 float altoDoConteudo = LayoutUtility.GetPreferredHeight(conteudo);
                 // o resto da janela (cabeçalho, divisória, margens) é o que ela mede sem o corpo
                 float resto = LayoutUtility.GetPreferredHeight(janela) - tam.preferredHeight;

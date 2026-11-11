@@ -2,6 +2,11 @@
 
 Cada componente tem versão e release próprios no GitHub, com a tag `<componente>-v<versão>`.
 
+## PBSLoaderCommonInterface 0.7.1 (2026-11-10)
+
+- Corrige os painéis de mod abrindo só com o título desde a 0.6.1: o corpo com rolagem ficava com altura zero.
+- Uma atualização por quadro que falha agora deixa um aviso no log em vez de parar sem registro.
+
 ## PBSLoaderCommonInterface 0.7.0 (2026-11-10)
 
 - `Painel.Abas(ativa, escolher, rotulos...)`: abas numa fileira, com a ativa destacada. Os rótulos são lidos a cada quadro e podem levar contadores ("Tráfego 18 •").

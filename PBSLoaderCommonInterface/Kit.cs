@@ -129,7 +129,12 @@ namespace PBSLoaderCommonInterface
                     if (dono == null || dono.WasCollected) { _aoQuadro.RemoveAt(i); continue; }
                     if (dono.activeInHierarchy) acao();
                 }
-                catch { _aoQuadro.RemoveAt(i); }
+                catch (Exception e)
+                {
+                    // a atualização sai da lista; o erro vai para o log em vez de sumir (um item parado sem aviso é pior)
+                    _aoQuadro.RemoveAt(i);
+                    MelonLoader.MelonLogger.Warning($"[Kit] atualização por quadro removida: {e.GetType().Name}: {e.Message}");
+                }
             }
         }
 

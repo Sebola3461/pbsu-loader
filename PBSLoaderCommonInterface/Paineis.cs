@@ -305,16 +305,17 @@ namespace PBSLoaderCommonInterface
             }
             Kit.NovoBotao(cab, null, Ico.Fechar, Estilo.Icone, p.Fechar, 36);
             Kit.Divisoria(j);
+            var corpo = Corpo(j);
 
             // Itens seguidos com a mesma condição dividem um grupo, que a janela liga e desliga a cada quadro.
             RectTransform grupo = null;
             Func<bool> condicaoDoGrupo = null;
             foreach (var it in p.Itens)
             {
-                if (it.Visivel == null) { grupo = null; condicaoDoGrupo = null; Item(j, p, it); continue; }
+                if (it.Visivel == null) { grupo = null; condicaoDoGrupo = null; Item(corpo, p, it); continue; }
                 if (grupo == null || it.Visivel != condicaoDoGrupo)
                 {
-                    grupo = Kit.Novo("Grupo", j);
+                    grupo = Kit.Novo("Grupo", corpo);
                     Kit.Coluna(grupo, 0);
                     condicaoDoGrupo = it.Visivel;
                     var g = grupo.gameObject;
@@ -325,6 +326,28 @@ namespace PBSLoaderCommonInterface
                 Item(grupo, p, it);
             }
             return j;
+        }
+
+        // Corpo da janela com rolagem: cresce com o conteúdo até o pé da tela e daí em diante rola. O cabeçalho
+        // fica fixo. A altura é refeita a cada quadro porque os grupos condicionais ligam e desligam.
+        const float MargemDeBaixo = 24f;
+
+        static RectTransform Corpo(RectTransform janela)
+        {
+            var conteudo = Kit.Lista(janela, out var scroll, 0);
+            var area = (RectTransform)scroll.transform;
+            var tam = Kit.Tam(area, -1, 0, 1, -1);
+            Kit.AoQuadro(janela.gameObject, () =>
+            {
+                var tela = (RectTransform)_canvas.transform;
+                float altoDoConteudo = LayoutUtility.GetPreferredHeight(conteudo);
+                // o resto da janela (cabeçalho, divisória, margens) é o que ela mede sem o corpo
+                float resto = LayoutUtility.GetPreferredHeight(janela) - tam.preferredHeight;
+                float livre = tela.rect.height - Mathf.Abs(janela.anchoredPosition.y) - MargemDeBaixo - resto;
+                float alvo = Mathf.Max(80f, Mathf.Min(altoDoConteudo, livre));
+                if (Mathf.Abs(tam.preferredHeight - alvo) > 0.5f) tam.preferredHeight = tam.minHeight = alvo;
+            });
+            return conteudo;
         }
 
         static string Ler(Painel p, Func<string> f)
